@@ -5,18 +5,22 @@ import { prisma } from '@/lib/prisma';
 import { hasDbConfiguration, findMemoryUserById, updateMemoryUser } from '@/lib/account-store';
 import { revalidatePath } from 'next/cache';
 
+import { getVerificationRecord } from '@/lib/verification-store';
+
 export async function getUserProfile(userId: string) {
+  const vRecord = getVerificationRecord(userId);
+
   if (!hasDbConfiguration()) {
     const memoryUser = findMemoryUserById(userId);
-    const vState = memoryUser?.verificationState ?? (memoryUser?.verifiedStatus ? 'VERIFIED' : 'UNVERIFIED');
+    const vState = vRecord?.verificationState ?? memoryUser?.verificationState ?? (memoryUser?.verifiedStatus ? 'VERIFIED' : 'UNVERIFIED');
     return {
       id: userId,
       name: memoryUser?.name ?? 'User',
       email: memoryUser?.email ?? 'user@example.com',
       phoneNumber: memoryUser?.phoneNumber ?? '+251 91 123 4567',
       telegramHandle: memoryUser?.telegramHandle ?? '@user',
-      fanNumber: memoryUser?.fanNumber ?? null,
-      nationalIdUrl: memoryUser?.nationalIdUrl ?? null,
+      fanNumber: vRecord?.fanNumber ?? memoryUser?.fanNumber ?? null,
+      nationalIdUrl: vRecord?.nationalIdUrl ?? memoryUser?.nationalIdUrl ?? null,
       verificationState: vState,
       verifiedStatus: vState === 'VERIFIED',
     };

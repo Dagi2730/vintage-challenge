@@ -66,6 +66,11 @@ export async function verifyFaydaOtp(otpCode: string) {
   };
 }
 
+import {
+  saveVerificationSubmission,
+  updateVerificationRecordState,
+} from '@/lib/verification-store';
+
 export async function submitFaydaVerificationRequest(idPhotoUrl: string) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -73,10 +78,21 @@ export async function submitFaydaVerificationRequest(idPhotoUrl: string) {
   }
 
   const userId = session.user.id;
+  const userName = session.user.name ?? 'User Account';
+  const userEmail = session.user.email ?? 'user@example.com';
   const stored = otpStore.get(userId);
 
   const fanNumber = stored?.fanNumber ?? '9842104920491049';
   const photoUrl = idPhotoUrl.trim() || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80';
+
+  // Save to global verification store
+  saveVerificationSubmission({
+    userId,
+    userName,
+    userEmail,
+    fanNumber,
+    nationalIdUrl: photoUrl,
+  });
 
   if (!hasDbConfiguration()) {
     updateMemoryUser(userId, {
@@ -118,6 +134,8 @@ export async function adminApproveVerification(userId: string) {
     throw new Error('Unauthorized.');
   }
 
+  updateVerificationRecordState(userId, 'VERIFIED');
+
   if (!hasDbConfiguration()) {
     updateMemoryUser(userId, {
       verificationState: 'VERIFIED',
@@ -146,6 +164,8 @@ export async function adminDeclineVerification(userId: string) {
   if (!session?.user?.id) {
     throw new Error('Unauthorized.');
   }
+
+  updateVerificationRecordState(userId, 'DECLINED');
 
   if (!hasDbConfiguration()) {
     updateMemoryUser(userId, {
