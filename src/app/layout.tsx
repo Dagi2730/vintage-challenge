@@ -4,6 +4,9 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'ReMarket | Used Goods Marketplace Ethiopia',
   description: 'Buy and sell quality used electronics, furniture, vehicles, and apparel locally.',
+  icons: {
+    icon: '/favicon.svg',
+  },
 };
 
 export default function RootLayout({

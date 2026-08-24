@@ -1,13 +1,12 @@
 "use server";
 
-import { auth } from '../auth';
-import prisma from '../lib/prisma';
+import { auth } from '@/auth';
+import { prisma } from '@/lib/prisma';
+import { hasDbConfiguration } from '@/lib/account-store';
 import { z } from 'zod';
 import { Condition, ListingStatus, Prisma } from '@prisma/client';
+import { mockCategories, mockListings } from '@/src/data/mockData';
 
-// -----------------------------------------------------------------------------
-// INPUT VALIDATION SCHEMAS
-// -----------------------------------------------------------------------------
 const createListingSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters long."),
   description: z.string().min(20, "Please provide a more detailed description."),
@@ -15,9 +14,8 @@ const createListingSchema = z.object({
   condition: z.nativeEnum(Condition),
   city: z.string().min(1, "City is required."),
   neighborhood: z.string().min(1, "Neighborhood is required."),
-  categoryId: z.string().uuid("Invalid category ID."),
-  // Cloudinary (or any CDN) URLs
-  photos: z.array(z.string().url("Must be valid image URLs.")).min(1, "At least one photo is required."),
+  categoryId: z.string().min(1, "Category is required."),
+  photos: z.array(z.string().url("Must be valid image URLs.")).min(3, "At least three photos are required.").max(5, "You may upload up to five photos."),
 });
 
 export type CreateListingInput = z.infer<typeof createListingSchema>;
@@ -25,6 +23,7 @@ export type CreateListingInput = z.infer<typeof createListingSchema>;
 export type SearchListingsParams = {
   keyword?: string;
   categoryId?: string;
+  categorySlug?: string;
   minPrice?: number;
   maxPrice?: number;
   condition?: Condition;
@@ -33,38 +32,34 @@ export type SearchListingsParams = {
   limit?: number;
 };
 
-// -----------------------------------------------------------------------------
-// SERVER ACTIONS
-// -----------------------------------------------------------------------------
+const listingInclude = {
+  category: { select: { name: true, slug: true } },
+  seller: { select: { id: true, name: true, rating: true, verifiedStatus: true } },
+} as const;
 
-/**
- * Creates a new listing for the authenticated user.
- */
 export async function createListing(input: CreateListingInput) {
-  // 1. Authenticate and Authorize
   const session = await auth();
   if (!session?.user?.id) {
     throw new Error("Unauthorized: You must be logged in to create a listing.");
   }
 
-  // (Optional) Enforce seller verification rules:
-  // if (!session.user.verifiedStatus) throw new Error("Unauthorized: Only verified sellers can post listings.");
-
-  // 2. Validate input data
-  const validated = createListingSchema.safeParse(input);
-  if (!validated.success) {
-    console.error("Validation failed:", validated.error.flatten());
-    throw new Error("Invalid listing data provided.");
+  if (!hasDbConfiguration()) {
+    throw new Error("Database is not configured. Add DATABASE_URL to create listings.");
   }
 
-  // 3. Persist to Database
+  const validated = createListingSchema.safeParse(input);
+  if (!validated.success) {
+    const message = validated.error.errors.map((issue) => issue.message).join(' ');
+    throw new Error(message || "Invalid listing data provided.");
+  }
+
   try {
     const listing = await prisma.listing.create({
       data: {
         ...validated.data,
         sellerId: session.user.id,
         status: ListingStatus.ACTIVE,
-      }
+      },
     });
 
     return { success: true, data: listing };
@@ -74,64 +69,157 @@ export async function createListing(input: CreateListingInput) {
   }
 }
 
+export async function getListingById(id: string) {
+  if (!hasDbConfiguration()) {
+    const listing = mockListings.find((item) => item.id === id);
+    if (!listing) return null;
 
-/**
- * Fetches listings with dynamic filtering and PostgreSQL Full-Text Search.
- */
+    return {
+      ...listing,
+      category: { name: 'General', slug: 'general' },
+      seller: {
+        id: listing.sellerId,
+        name: 'Local Seller',
+        rating: 4.8,
+        verifiedStatus: true,
+      },
+    };
+  }
+
+  try {
+    return await prisma.listing.findUnique({
+      where: { id },
+      include: listingInclude,
+    });
+  } catch (error) {
+    console.error("Error fetching listing:", error);
+    return null;
+  }
+}
+
+export async function getUserListings(userId: string) {
+  if (!hasDbConfiguration()) {
+    return mockListings.filter((listing) => listing.sellerId === userId);
+  }
+
+  try {
+    return await prisma.listing.findMany({
+      where: { sellerId: userId },
+      orderBy: { createdAt: 'desc' },
+      include: { category: { select: { name: true, slug: true } } },
+    });
+  } catch (error) {
+    console.error("Error fetching user listings:", error);
+    return [];
+  }
+}
+
 export async function searchListings(params: SearchListingsParams) {
-  const { 
-    keyword, 
-    categoryId, 
-    minPrice, 
-    maxPrice, 
-    condition, 
+  const {
+    keyword,
+    categoryId,
+    categorySlug,
+    minPrice,
+    maxPrice,
+    condition,
     neighborhood,
     page = 1,
-    limit = 20
+    limit = 20,
   } = params;
 
-  // 1. Build the dynamic base where clause
+  if (!hasDbConfiguration()) {
+    let results = [...mockListings];
+
+    if (keyword?.trim()) {
+      const term = keyword.trim().toLowerCase();
+      results = results.filter(
+        (listing) =>
+          listing.title.toLowerCase().includes(term) ||
+          listing.description.toLowerCase().includes(term),
+      );
+    }
+
+    if (categorySlug) {
+      const category = mockCategories.find((item) => item.slug === categorySlug);
+      if (category) {
+        results = results.filter((listing) => listing.categoryId === category.id);
+      }
+    }
+
+    if (condition) {
+      results = results.filter((listing) => listing.condition === condition);
+    }
+
+    if (neighborhood) {
+      results = results.filter((listing) =>
+        listing.neighborhood.toLowerCase().includes(neighborhood.toLowerCase()),
+      );
+    }
+
+    if (minPrice !== undefined) {
+      results = results.filter((listing) => listing.price >= minPrice);
+    }
+
+    if (maxPrice !== undefined) {
+      results = results.filter((listing) => listing.price <= maxPrice);
+    }
+
+    const total = results.length;
+    const start = (page - 1) * limit;
+    const data = results.slice(start, start + limit).map((listing) => ({
+      ...listing,
+      category: { name: 'General', slug: 'general' },
+      seller: { name: 'Local Seller', rating: 4.8, verifiedStatus: true },
+    }));
+
+    return {
+      success: true,
+      data,
+      metadata: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
   const where: Prisma.ListingWhereInput = {
-    status: ListingStatus.ACTIVE, // Never show sold/inactive listings in search
+    status: ListingStatus.ACTIVE,
   };
 
-  // 2. Postgres Full-Text Search Integration
   if (keyword && keyword.trim() !== '') {
-    // Format the query for Postgres tsquery. 
-    // Converting spaces to ' & ' ensures all terms must be present.
-    const searchQuery = keyword.trim().split(/\s+/).join(' & ');
-    
-    // We search across BOTH title and description
+    const term = keyword.trim();
     where.OR = [
-      { title: { search: searchQuery } },
-      { description: { search: searchQuery } }
+      { title: { contains: term, mode: 'insensitive' } },
+      { description: { contains: term, mode: 'insensitive' } },
     ];
   }
 
-  // 3. Relational and Exact Match Filters
   if (categoryId) {
     where.categoryId = categoryId;
+  }
+
+  if (categorySlug) {
+    where.category = { slug: categorySlug };
   }
 
   if (condition) {
     where.condition = condition;
   }
 
-  // 4. Case-Insensitive String Filter
   if (neighborhood) {
     where.neighborhood = { contains: neighborhood, mode: 'insensitive' };
   }
 
-  // 5. Range Filters (Price)
   if (minPrice !== undefined || maxPrice !== undefined) {
     where.price = {};
     if (minPrice !== undefined) where.price.gte = minPrice;
     if (maxPrice !== undefined) where.price.lte = maxPrice;
   }
 
-  // 6. Execute Query with Pagination
   const skip = (page - 1) * limit;
-  
+
   try {
     const [listings, totalCount] = await Promise.all([
       prisma.listing.findMany({
@@ -139,13 +227,9 @@ export async function searchListings(params: SearchListingsParams) {
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
-        // Include light payloads for UI display
-        include: {
-          category: { select: { name: true, slug: true } },
-          seller: { select: { name: true, rating: true, verifiedStatus: true } }
-        }
+        include: listingInclude,
       }),
-      prisma.listing.count({ where })
+      prisma.listing.count({ where }),
     ]);
 
     return {
@@ -155,8 +239,8 @@ export async function searchListings(params: SearchListingsParams) {
         total: totalCount,
         page,
         limit,
-        totalPages: Math.ceil(totalCount / limit)
-      }
+        totalPages: Math.ceil(totalCount / limit),
+      },
     };
   } catch (error) {
     console.error("Error executing search:", error);
