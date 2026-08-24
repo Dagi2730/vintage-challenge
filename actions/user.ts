@@ -8,14 +8,17 @@ import { revalidatePath } from 'next/cache';
 export async function getUserProfile(userId: string) {
   if (!hasDbConfiguration()) {
     const memoryUser = findMemoryUserById(userId);
+    const vState = memoryUser?.verificationState ?? (memoryUser?.verifiedStatus ? 'VERIFIED' : 'UNVERIFIED');
     return {
       id: userId,
       name: memoryUser?.name ?? 'User',
       email: memoryUser?.email ?? 'user@example.com',
       phoneNumber: memoryUser?.phoneNumber ?? '+251 91 123 4567',
       telegramHandle: memoryUser?.telegramHandle ?? '@user',
-      verifiedStatus: memoryUser?.verifiedStatus ?? false,
+      fanNumber: memoryUser?.fanNumber ?? null,
       nationalIdUrl: memoryUser?.nationalIdUrl ?? null,
+      verificationState: vState,
+      verifiedStatus: vState === 'VERIFIED',
     };
   }
 
@@ -37,6 +40,8 @@ export async function getUserProfile(userId: string) {
       ...user,
       phoneNumber: '+251 91 123 4567',
       telegramHandle: '@' + (user.name.toLowerCase().replace(/\s+/g, '')),
+      fanNumber: null,
+      verificationState: user.verifiedStatus ? 'VERIFIED' as const : 'UNVERIFIED' as const,
     };
   } catch (error) {
     console.error('Error fetching user profile:', error);

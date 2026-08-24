@@ -6,6 +6,8 @@ export type ListingStatus = 'ACTIVE' | 'SOLD';
 
 export type TransactionStatus = 'PENDING' | 'SUCCESS' | 'FAILED';
 
+export type VerificationState = 'UNVERIFIED' | 'IN_PROGRESS' | 'VERIFIED' | 'DECLINED';
+
 export type User = {
   id: string;
   name: string;
@@ -14,7 +16,9 @@ export type User = {
   role: Role;
   phoneNumber?: string | null;
   telegramHandle?: string | null;
+  fanNumber?: string | null;
   nationalIdUrl?: string | null;
+  verificationState?: VerificationState;
   verifiedStatus: boolean;
   rating: number;
   createdAt: Date;
