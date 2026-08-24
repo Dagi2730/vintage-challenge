@@ -49,7 +49,7 @@ export default async function ListingDetailPage({
               <div className="relative h-[420px] w-full overflow-hidden bg-slate-100">
                 <img src={listing.photos[0]} alt={listing.title} className="w-full h-full object-cover" />
                 {isSold && (
-                  <span className="absolute top-4 right-4 bg-rose-600 text-white text-xs font-black tracking-widest px-3.5 py-1.5 rounded-lg shadow-md uppercase border border-rose-500 flex items-center gap-1.5 z-10">
+                  <span className="absolute top-4 right-4 bg-red-600 text-white text-xs font-black tracking-widest px-3.5 py-1.5 rounded-lg shadow-lg uppercase border border-red-700 flex items-center gap-1.5 z-20">
                     <span className="w-2 h-2 rounded-full bg-white"></span>
                     SOLD
                   </span>

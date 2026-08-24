@@ -69,13 +69,18 @@ export async function createListing(input: CreateListingInput) {
   }
 }
 
+import { getMemoryListingStatus } from '@/lib/listing-store';
+
 export async function getListingById(id: string) {
   if (!hasDbConfiguration()) {
     const listing = mockListings.find((item) => item.id === id);
     if (!listing) return null;
 
+    const currentStatus = getMemoryListingStatus(id, listing.status as ListingStatus);
+
     return {
       ...listing,
+      status: currentStatus,
       category: { name: 'General', slug: 'general' },
       seller: {
         id: listing.sellerId,
@@ -99,7 +104,12 @@ export async function getListingById(id: string) {
 
 export async function getUserListings(userId: string) {
   if (!hasDbConfiguration()) {
-    return mockListings.filter((listing) => listing.sellerId === userId);
+    return mockListings
+      .map((listing) => ({
+        ...listing,
+        status: getMemoryListingStatus(listing.id, listing.status as ListingStatus),
+      }))
+      .filter((listing) => listing.sellerId === userId);
   }
 
   try {
@@ -168,6 +178,7 @@ export async function searchListings(params: SearchListingsParams) {
     const start = (page - 1) * limit;
     const data = results.slice(start, start + limit).map((listing) => ({
       ...listing,
+      status: getMemoryListingStatus(listing.id, listing.status as ListingStatus),
       category: { name: 'General', slug: 'general' },
       seller: { name: 'Local Seller', rating: 4.8, verifiedStatus: true },
     }));

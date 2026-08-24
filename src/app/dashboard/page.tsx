@@ -1,170 +1,120 @@
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
-import { auth } from '@/auth';
 import { Header } from '@/src/components/Header';
-import { ReviewForm } from '@/src/components/ReviewForm';
-import { getUserListings } from '@/actions/listings';
-import { getUserTransactions } from '@/actions/transactions';
-import { getReviewableTransactions } from '@/actions/reviews';
+import { getCategories } from '@/actions/categories';
+import { searchListings } from '@/actions/listings';
 import { formatCondition, formatPrice } from '@/lib/format';
 
 export default async function DashboardPage() {
-  const session = await auth();
-  if (!session?.user?.id) {
-    redirect('/login');
-  }
-
-  const userId = session.user.id;
-
-  const [listings, transactions, reviewable] = await Promise.all([
-    getUserListings(userId),
-    getUserTransactions(userId),
-    getReviewableTransactions(userId),
+  const [categories, listingsResult] = await Promise.all([
+    getCategories(),
+    searchListings({ limit: 12 }),
   ]);
+
+  const listings = listingsResult.data;
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header />
 
-      <main className="max-w-7xl mx-auto px-6 py-10 w-full flex-1 space-y-10">
-        <section>
-          <h1 className="text-2xl font-bold text-slate-900">Welcome back, {session.user.name}</h1>
-          <p className="text-sm text-slate-500 mt-1">Manage your listings, purchases, and reviews.</p>
-        </section>
+      <section className="bg-slate-100 py-16 px-6 text-center border-b border-slate-200">
+        <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4 tracking-tight">
+          Find your next treasure
+        </h1>
+        <form action="/explore" method="get" className="max-w-xl mx-auto relative mb-6">
+          <input
+            type="text"
+            name="q"
+            placeholder="Search for items..."
+            className="w-full bg-white border border-slate-300 rounded-full py-3.5 pl-12 pr-4 text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+          />
+          <svg className="w-5 h-5 text-slate-400 absolute left-4 top-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </form>
 
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="rounded-xl border border-slate-200 bg-white p-5">
-            <p className="text-xs uppercase tracking-wide text-slate-400">Active Listings</p>
-            <p className="text-2xl font-bold text-slate-900 mt-2">
-              {listings.filter((listing) => listing.status === 'ACTIVE').length}
-            </p>
-          </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-5">
-            <p className="text-xs uppercase tracking-wide text-slate-400">Purchases</p>
-            <p className="text-2xl font-bold text-slate-900 mt-2">{transactions.purchases.length}</p>
-          </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-5">
-            <p className="text-xs uppercase tracking-wide text-slate-400">Sales</p>
-            <p className="text-2xl font-bold text-slate-900 mt-2">{transactions.sales.length}</p>
-          </div>
-        </section>
-
-        <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-slate-900">My Listings</h2>
-            <Link href="/sell" className="text-sm text-blue-600 font-medium hover:underline">
-              Create listing
+        <div className="flex flex-wrap justify-center gap-3">
+          {categories.map((cat) => (
+            <Link
+              key={cat.slug}
+              href={`/explore?category=${cat.slug}`}
+              className="bg-white hover:bg-blue-50 text-slate-700 hover:text-blue-600 border border-slate-200 px-5 py-2 rounded-full text-sm font-medium transition shadow-sm"
+            >
+              {cat.name}
             </Link>
-          </div>
+          ))}
+        </div>
+      </section>
 
-          {listings.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-slate-500">
-              You have not posted any listings yet.
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {listings.map((listing) => (
-                <Link
-                  key={listing.id}
-                  href={`/listings/${listing.id}`}
-                  className="rounded-xl border border-slate-200 bg-white overflow-hidden hover:shadow-md transition flex flex-col"
-                >
-                  <div className="relative h-40 w-full bg-slate-100 overflow-hidden">
-                    <img src={listing.photos[0]} alt={listing.title} className="h-full w-full object-cover" />
-                    {listing.status === 'SOLD' && (
-                      <span className="absolute top-3 right-3 bg-rose-600 text-white text-[11px] font-black tracking-wider px-2.5 py-1 rounded-md shadow-sm uppercase border border-rose-500 z-10 flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
-                        SOLD
-                      </span>
-                    )}
+      <main className="flex-1 max-w-7xl mx-auto px-6 py-10 w-full">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold text-slate-900">Fresh Local Listings</h2>
+          <Link href="/explore" className="text-blue-600 font-medium text-sm hover:underline">
+            See all
+          </Link>
+        </div>
+
+        {listings.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500">
+            No listings yet. Be the first to{' '}
+            <Link href="/sell" className="text-blue-600 font-medium hover:underline">
+              sell an item
+            </Link>
+            .
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {listings.map((item) => (
+              <Link
+                key={item.id}
+                href={`/listings/${item.id}`}
+                className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition flex flex-col group"
+              >
+                <div className="relative h-48 w-full bg-slate-100 overflow-hidden">
+                  <div className="grid grid-cols-2 gap-1 h-full">
+                    {(item.photos.slice(0, 4) || []).map((photo, index) => (
+                      <img key={`${item.id}-${index}`} src={photo} alt={item.title} className="w-full h-24 object-cover" />
+                    ))}
                   </div>
-                  <div className="p-4">
-                    <p className="text-sm font-semibold text-slate-900 line-clamp-1">{listing.title}</p>
-                    <p className="text-sm font-bold text-slate-800 mt-1">{formatPrice(listing.price)}</p>
-                    <p className="text-xs text-slate-500 mt-2">
-                      {formatCondition(listing.condition)} · {listing.status}
+                  <span className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-slate-800 text-xs font-semibold px-2.5 py-1 rounded-md shadow-xs">
+                    {formatCondition(item.condition)}
+                  </span>
+                  {item.status === 'SOLD' && (
+                    <span className="absolute top-3 right-3 bg-red-600 text-white text-[11px] font-black tracking-wider px-2.5 py-1 rounded-md shadow-md uppercase border border-red-700 z-10 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
+                      SOLD
+                    </span>
+                  )}
+                </div>
+                <div className="p-4 flex flex-col flex-1 justify-between">
+                  <div>
+                    <h3 className="font-semibold text-slate-900 text-sm mb-1 line-clamp-1">{item.title}</h3>
+                    <p className="text-lg font-bold text-slate-900">{formatPrice(item.price)}</p>
+                  </div>
+                  <div className="flex items-center justify-between mt-3">
+                    <p className="text-xs text-slate-500 flex items-center gap-1">
+                      📍 {item.neighborhood}, {item.city}
                     </p>
+                    <span className="text-[11px] font-semibold text-slate-600 border border-slate-200 px-2 py-1 rounded-full">
+                      {item.photos.length} photos
+                    </span>
                   </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </section>
-
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div>
-            <h2 className="text-lg font-bold text-slate-900 mb-4">My Purchases</h2>
-            {transactions.purchases.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-500">
-                No purchases yet.
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {transactions.purchases.map((transaction) => (
-                  <div key={transaction.id} className="rounded-xl border border-slate-200 bg-white p-4 flex gap-4">
-                    <img
-                      src={transaction.listing.photos[0]}
-                      alt={transaction.listing.title}
-                      className="h-16 w-16 rounded object-cover"
-                    />
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-slate-900">{transaction.listing.title}</p>
-                      <p className="text-xs text-slate-500 mt-1">
-                        Seller: {transaction.seller.name} · {formatPrice(transaction.amount)}
-                      </p>
-                      <p className="text-xs mt-1 font-medium text-blue-600">{transaction.status}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                </div>
+              </Link>
+            ))}
           </div>
-
-          <div>
-            <h2 className="text-lg font-bold text-slate-900 mb-4">My Sales</h2>
-            {transactions.sales.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-500">
-                No sales yet.
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {transactions.sales.map((transaction) => (
-                  <div key={transaction.id} className="rounded-xl border border-slate-200 bg-white p-4 flex gap-4">
-                    <img
-                      src={transaction.listing.photos[0]}
-                      alt={transaction.listing.title}
-                      className="h-16 w-16 rounded object-cover"
-                    />
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-slate-900">{transaction.listing.title}</p>
-                      <p className="text-xs text-slate-500 mt-1">
-                        Buyer: {transaction.buyer.name} · {formatPrice(transaction.amount)}
-                      </p>
-                      <p className="text-xs mt-1 font-medium text-emerald-600">{transaction.status}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
-
-        {reviewable.length > 0 && (
-          <section>
-            <h2 className="text-lg font-bold text-slate-900 mb-4">Leave a Review</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {reviewable.map((transaction) => (
-                <ReviewForm
-                  key={transaction.id}
-                  transactionId={transaction.id}
-                  sellerName={transaction.seller.name}
-                  listingTitle={transaction.listing.title}
-                />
-              ))}
-            </div>
-          </section>
         )}
       </main>
+
+      <footer className="bg-white border-t border-slate-200 py-6 px-6 text-sm text-slate-500 flex flex-col sm:flex-row justify-between items-center max-w-7xl mx-auto w-full">
+        <span className="font-semibold text-slate-800">E-merkato</span>
+        <div className="flex gap-6 mt-4 sm:mt-0">
+          <span className="hover:text-slate-800 cursor-pointer">Trust & Safety</span>
+          <span className="hover:text-slate-800 cursor-pointer">Support</span>
+          <span className="hover:text-slate-800 cursor-pointer">About Us</span>
+          <span className="hover:text-slate-800 cursor-pointer">Privacy Policy</span>
+        </div>
+        <span className="mt-4 sm:mt-0 text-xs">© 2026 E-merkato Inc. All rights reserved.</span>
+      </footer>
     </div>
   );
 }

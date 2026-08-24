@@ -13,7 +13,7 @@ export async function Header({ showSearch = false, searchValue = '' }: HeaderPro
   return (
     <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between sticky top-0 z-50">
       <Link href="/" className="text-xl font-bold text-blue-600 tracking-tight">
-        ReMarket
+        E-merkato
       </Link>
 
       <div className="flex items-center gap-4">
@@ -46,9 +46,13 @@ export async function Header({ showSearch = false, searchValue = '' }: HeaderPro
               Dashboard
             </Link>
             <SignOutButton />
-            <div className="w-8 h-8 rounded-full bg-blue-100 border border-blue-200 flex items-center justify-center text-xs font-bold text-blue-700">
+            <Link
+              href="/account"
+              className="w-8 h-8 rounded-full bg-blue-100 hover:bg-blue-200 border border-blue-200 flex items-center justify-center text-xs font-bold text-blue-700 transition shadow-xs cursor-pointer"
+              title="Account Settings & Profile"
+            >
               {session.user.name?.charAt(0).toUpperCase() ?? 'U'}
-            </div>
+            </Link>
           </>
         ) : (
           <Link

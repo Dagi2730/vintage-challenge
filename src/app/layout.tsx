@@ -2,7 +2,7 @@ import './globals.css';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'ReMarket | Used Goods Marketplace Ethiopia',
+  title: 'E-merkato | Used Goods Marketplace Ethiopia',
   description: 'Buy and sell quality used electronics, furniture, vehicles, and apparel locally.',
   icons: {
     icon: '/favicon.svg',

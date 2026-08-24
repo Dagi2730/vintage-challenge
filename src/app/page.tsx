@@ -106,14 +106,14 @@ export default async function Home() {
       </main>
 
       <footer className="bg-white border-t border-slate-200 py-6 px-6 text-sm text-slate-500 flex flex-col sm:flex-row justify-between items-center max-w-7xl mx-auto w-full">
-        <span className="font-semibold text-slate-800">ReMarket</span>
+        <span className="font-semibold text-slate-800">E-merkato</span>
         <div className="flex gap-6 mt-4 sm:mt-0">
           <span className="hover:text-slate-800 cursor-pointer">Trust & Safety</span>
           <span className="hover:text-slate-800 cursor-pointer">Support</span>
           <span className="hover:text-slate-800 cursor-pointer">About Us</span>
           <span className="hover:text-slate-800 cursor-pointer">Privacy Policy</span>
         </div>
-        <span className="mt-4 sm:mt-0 text-xs">© 2026 ReMarket Inc. All rights reserved.</span>
+        <span className="mt-4 sm:mt-0 text-xs">© 2026 E-merkato Inc. All rights reserved.</span>
       </footer>
     </div>
   );

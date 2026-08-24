@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { hasDbConfiguration } from '@/lib/account-store';
 import { ListingStatus, TransactionStatus } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
+import { setMemoryListingStatus } from '@/lib/listing-store';
 import { mockListings, mockTransactions } from '@/src/data/mockData';
 import type { Transaction } from '@/src/types';
 
@@ -117,7 +118,7 @@ export async function completeTransaction(transactionId: string) {
       // Fallback: search by listing ID if transactionId is listingId
       const listing = mockListings.find((item) => item.id === transactionId);
       if (listing) {
-        listing.status = 'SOLD';
+        setMemoryListingStatus(listing.id, ListingStatus.SOLD);
         const fallbackTx: Transaction = {
           id: `tx_${Date.now()}`,
           listingId: listing.id,
@@ -141,10 +142,7 @@ export async function completeTransaction(transactionId: string) {
     }
 
     mockTx.status = TransactionStatus.SUCCESS;
-    const targetListing = mockListings.find((item) => item.id === mockTx.listingId);
-    if (targetListing) {
-      targetListing.status = 'SOLD';
-    }
+    setMemoryListingStatus(mockTx.listingId, ListingStatus.SOLD);
 
     revalidatePath(`/listings/${mockTx.listingId}`);
     revalidatePath('/dashboard');

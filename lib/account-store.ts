@@ -6,6 +6,9 @@ export type MemoryAccount = {
   email: string;
   passwordHash: string;
   role: 'USER' | 'ADMIN';
+  phoneNumber?: string;
+  telegramHandle?: string;
+  nationalIdUrl?: string;
   verifiedStatus: boolean;
   rating: number;
 };
@@ -19,6 +22,21 @@ export function hasDbConfiguration() {
 export function findMemoryUser(email: string) {
   const normalizedEmail = email.toLowerCase().trim();
   return memoryUsers.get(normalizedEmail) ?? null;
+}
+
+export function findMemoryUserById(id: string) {
+  return Array.from(memoryUsers.values()).find((u) => u.id === id) ?? null;
+}
+
+export function updateMemoryUser(id: string, updates: Partial<MemoryAccount>) {
+  for (const [email, user] of Array.from(memoryUsers.entries())) {
+    if (user.id === id) {
+      const updated = { ...user, ...updates };
+      memoryUsers.set(email, updated);
+      return updated;
+    }
+  }
+  return null;
 }
 
 export function createMemoryUser(input: {
@@ -39,6 +57,8 @@ export function createMemoryUser(input: {
     email,
     passwordHash: input.passwordHash,
     role: 'USER',
+    phoneNumber: '+251 91 123 4567',
+    telegramHandle: '@dagmawit',
     verifiedStatus: false,
     rating: 0,
   };

@@ -12,6 +12,8 @@ export type User = {
   email: string;
   passwordHash: string;
   role: Role;
+  phoneNumber?: string | null;
+  telegramHandle?: string | null;
   nationalIdUrl?: string | null;
   verifiedStatus: boolean;
   rating: number;

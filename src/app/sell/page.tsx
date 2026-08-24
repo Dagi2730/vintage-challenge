@@ -8,7 +8,7 @@ export default async function SellPage() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
-        <Link href="/" className="text-xl font-bold text-blue-600">ReMarket Seller</Link>
+        <Link href="/" className="text-xl font-bold text-blue-600">E-merkato Seller</Link>
         <span className="text-sm font-medium text-slate-600">Create New Listing</span>
       </header>
 

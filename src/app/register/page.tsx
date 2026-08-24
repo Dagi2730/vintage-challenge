@@ -34,7 +34,7 @@ export default function RegisterPage() {
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
       <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-sm border border-slate-200">
         <h1 className="text-2xl font-bold text-slate-900 mb-2">Create Account</h1>
-        <p className="text-sm text-slate-500 mb-6">Join ReMarket to buy and sell items locally.</p>
+        <p className="text-sm text-slate-500 mb-6">Join E-merkato to buy and sell items locally.</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

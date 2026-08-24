@@ -51,9 +51,21 @@ export function BuyButton({ listingId, price, isLoggedIn, isOwner, isSold }: Buy
 
   if (isSold) {
     return (
-      <div className="w-full bg-slate-100 border border-slate-200 text-slate-500 font-bold py-3 rounded-lg text-sm text-center tracking-wide uppercase cursor-default shadow-xs flex items-center justify-center gap-2">
-        <span className="inline-block w-2 h-2 rounded-full bg-slate-400"></span>
-        Item Sold
+      <div className="space-y-3">
+        <button
+          type="button"
+          onClick={() => setError('This listing is no longer available.')}
+          className="w-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-600 font-bold py-3 rounded-lg text-sm text-center tracking-wide uppercase cursor-pointer transition shadow-xs flex items-center justify-center gap-2"
+        >
+          <span className="inline-block w-2 h-2 rounded-full bg-red-500"></span>
+          Item Sold
+        </button>
+        {error && (
+          <div className="bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium py-2.5 px-3 rounded-lg flex items-center gap-2 shadow-xs">
+            <span>ℹ️</span>
+            <span>{error}</span>
+          </div>
+        )}
       </div>
     );
   }
