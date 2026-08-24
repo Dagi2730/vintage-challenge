@@ -6,7 +6,7 @@ import { mockUsers } from '@/src/data/mockData';
 import { hasDbConfiguration } from '@/lib/account-store';
 import { prisma } from '@/lib/prisma';
 import { adminApproveVerification, adminDeclineVerification } from '@/actions/fayda';
-import { findMemoryUserById, getAllMemoryUsers } from '@/lib/account-store';
+import { getAllVerificationRecords } from '@/lib/verification-store';
 
 export default async function AdminPage() {
   const session = await auth();
@@ -17,47 +17,33 @@ export default async function AdminPage() {
   let users: any[] = [];
 
   if (!hasDbConfiguration()) {
-    const memUsers = getAllMemoryUsers();
+    const vRecords = getAllVerificationRecords();
     const map = new Map<string, any>();
 
-    // Add default mock users first
+    // Put all verification records in admin queue
+    for (const rec of vRecords) {
+      map.set(rec.userId, {
+        id: rec.userId,
+        name: rec.userName,
+        email: rec.userEmail,
+        fanNumber: rec.fanNumber,
+        nationalIdUrl: rec.nationalIdUrl,
+        verificationState: rec.verificationState,
+        verifiedStatus: rec.verificationState === 'VERIFIED',
+      });
+    }
+
+    // Also include default mock users if not present
     for (const u of mockUsers) {
-      const mem = findMemoryUserById(u.id);
-      map.set(u.id, {
-        ...u,
-        fanNumber: mem?.fanNumber ?? '9842104920491049',
-        nationalIdUrl: mem?.nationalIdUrl ?? 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80',
-        verificationState: mem?.verificationState ?? (mem?.verifiedStatus ? 'VERIFIED' : 'UNVERIFIED'),
-      });
-    }
-
-    // Merge all memory users (including current user session requests)
-    for (const mem of memUsers) {
-      map.set(mem.id, {
-        id: mem.id,
-        name: mem.name ?? session.user?.name ?? 'User Account',
-        email: mem.email ?? session.user?.email ?? 'user@example.com',
-        role: mem.role ?? 'USER',
-        fanNumber: mem.fanNumber ?? '9842104920491049',
-        nationalIdUrl: mem.nationalIdUrl ?? 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80',
-        verificationState: mem.verificationState ?? (mem.verifiedStatus ? 'VERIFIED' : 'UNVERIFIED'),
-        verifiedStatus: mem.verifiedStatus ?? false,
-      });
-    }
-
-    // Also ensure current session user is present in queue if they submitted
-    if (session.user?.id && !map.has(session.user.id)) {
-      const mem = findMemoryUserById(session.user.id);
-      if (mem) {
-        map.set(session.user.id, {
-          id: mem.id,
-          name: mem.name ?? session.user.name ?? 'User Account',
-          email: mem.email ?? session.user.email ?? 'user@example.com',
-          role: mem.role ?? 'USER',
-          fanNumber: mem.fanNumber ?? '9842104920491049',
-          nationalIdUrl: mem.nationalIdUrl,
-          verificationState: mem.verificationState ?? (mem.verifiedStatus ? 'VERIFIED' : 'UNVERIFIED'),
-          verifiedStatus: mem.verifiedStatus ?? false,
+      if (!map.has(u.id)) {
+        map.set(u.id, {
+          id: u.id,
+          name: u.name,
+          email: u.email,
+          fanNumber: '9842104920491049',
+          nationalIdUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80',
+          verificationState: u.verifiedStatus ? 'VERIFIED' : 'UNVERIFIED',
+          verifiedStatus: u.verifiedStatus,
         });
       }
     }
