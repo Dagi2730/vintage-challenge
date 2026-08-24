@@ -16,19 +16,6 @@ const globalVerificationStore: Map<string, VerificationRecord> =
 
 (globalThis as any).__globalVerificationStore = globalVerificationStore;
 
-// Pre-seed with default demo submission if empty
-if (globalVerificationStore.size === 0) {
-  globalVerificationStore.set('user_1', {
-    userId: 'user_1',
-    userName: 'Abebe Kebede',
-    userEmail: 'abebe@example.com',
-    fanNumber: '9842-1049-2049-1049',
-    nationalIdUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80',
-    verificationState: 'VERIFIED',
-    submittedAt: new Date(),
-  });
-}
-
 export function saveVerificationSubmission(record: {
   userId: string;
   userName: string;

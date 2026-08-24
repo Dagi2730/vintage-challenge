@@ -14,41 +14,23 @@ export default async function AdminPage() {
     redirect('/login');
   }
 
+  if (session.user.role !== 'ADMIN') {
+    redirect('/dashboard');
+  }
+
   let users: any[] = [];
 
   if (!hasDbConfiguration()) {
     const vRecords = getAllVerificationRecords();
-    const map = new Map<string, any>();
-
-    // Put all verification records in admin queue
-    for (const rec of vRecords) {
-      map.set(rec.userId, {
-        id: rec.userId,
-        name: rec.userName,
-        email: rec.userEmail,
-        fanNumber: rec.fanNumber,
-        nationalIdUrl: rec.nationalIdUrl,
-        verificationState: rec.verificationState,
-        verifiedStatus: rec.verificationState === 'VERIFIED',
-      });
-    }
-
-    // Also include default mock users if not present
-    for (const u of mockUsers) {
-      if (!map.has(u.id)) {
-        map.set(u.id, {
-          id: u.id,
-          name: u.name,
-          email: u.email,
-          fanNumber: '9842104920491049',
-          nationalIdUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80',
-          verificationState: u.verifiedStatus ? 'VERIFIED' : 'UNVERIFIED',
-          verifiedStatus: u.verifiedStatus,
-        });
-      }
-    }
-
-    users = Array.from(map.values());
+    users = vRecords.map((rec) => ({
+      id: rec.userId,
+      name: rec.userName,
+      email: rec.userEmail,
+      fanNumber: rec.fanNumber,
+      nationalIdUrl: rec.nationalIdUrl,
+      verificationState: rec.verificationState,
+      verifiedStatus: rec.verificationState === 'VERIFIED',
+    }));
   } else {
     try {
       users = await prisma.user.findMany({

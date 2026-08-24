@@ -37,20 +37,57 @@ const listingInclude = {
   seller: { select: { id: true, name: true, rating: true, verifiedStatus: true } },
 } as const;
 
+import {
+  getMemoryListingStatus,
+  saveMemoryListing,
+  getAllMemoryListings,
+} from '@/lib/listing-store';
+import { revalidatePath } from 'next/cache';
+
 export async function createListing(input: CreateListingInput) {
   const session = await auth();
   if (!session?.user?.id) {
     throw new Error("Unauthorized: You must be logged in to create a listing.");
   }
 
-  if (!hasDbConfiguration()) {
-    throw new Error("Database is not configured. Add DATABASE_URL to create listings.");
-  }
-
   const validated = createListingSchema.safeParse(input);
   if (!validated.success) {
     const message = validated.error.errors.map((issue) => issue.message).join(' ');
     throw new Error(message || "Invalid listing data provided.");
+  }
+
+  if (!hasDbConfiguration()) {
+    const categoryName = mockCategories.find((c) => c.id === validated.data.categoryId)?.name ?? 'General';
+    const newListing = {
+      id: `listing_${Date.now()}`,
+      sellerId: session.user.id,
+      categoryId: validated.data.categoryId,
+      title: validated.data.title,
+      description: validated.data.description,
+      price: validated.data.price,
+      condition: validated.data.condition,
+      city: validated.data.city,
+      neighborhood: validated.data.neighborhood,
+      status: ListingStatus.ACTIVE,
+      photos: validated.data.photos,
+      createdAt: new Date(),
+      category: { name: categoryName, slug: categoryName.toLowerCase() },
+      seller: {
+        id: session.user.id,
+        name: session.user.name ?? 'Seller',
+        rating: 5.0,
+        verifiedStatus: Boolean(session.user.verifiedStatus),
+      },
+    };
+
+    saveMemoryListing(newListing);
+
+    revalidatePath('/');
+    revalidatePath('/dashboard');
+    revalidatePath('/explore');
+    revalidatePath('/sell');
+
+    return { success: true, data: newListing };
   }
 
   try {
@@ -62,6 +99,10 @@ export async function createListing(input: CreateListingInput) {
       },
     });
 
+    revalidatePath('/');
+    revalidatePath('/dashboard');
+    revalidatePath('/explore');
+
     return { success: true, data: listing };
   } catch (error) {
     console.error("Error creating listing:", error);
@@ -69,23 +110,19 @@ export async function createListing(input: CreateListingInput) {
   }
 }
 
-import { getMemoryListingStatus } from '@/lib/listing-store';
-
 export async function getListingById(id: string) {
   if (!hasDbConfiguration()) {
-    const listing = mockListings.find((item) => item.id === id);
+    const allListings = getAllMemoryListings();
+    const listing = allListings.find((item) => item.id === id);
     if (!listing) return null;
-
-    const currentStatus = getMemoryListingStatus(id, listing.status as ListingStatus);
 
     return {
       ...listing,
-      status: currentStatus,
-      category: { name: 'General', slug: 'general' },
-      seller: {
+      category: listing.category ?? { name: 'General', slug: 'general' },
+      seller: listing.seller ?? {
         id: listing.sellerId,
         name: 'Local Seller',
-        rating: 4.8,
+        rating: 5.0,
         verifiedStatus: true,
       },
     };
@@ -104,12 +141,8 @@ export async function getListingById(id: string) {
 
 export async function getUserListings(userId: string) {
   if (!hasDbConfiguration()) {
-    return mockListings
-      .map((listing) => ({
-        ...listing,
-        status: getMemoryListingStatus(listing.id, listing.status as ListingStatus),
-      }))
-      .filter((listing) => listing.sellerId === userId);
+    const allListings = getAllMemoryListings();
+    return allListings.filter((listing) => listing.sellerId === userId);
   }
 
   try {
@@ -138,7 +171,7 @@ export async function searchListings(params: SearchListingsParams) {
   } = params;
 
   if (!hasDbConfiguration()) {
-    let results = [...mockListings];
+    let results = getAllMemoryListings();
 
     if (keyword?.trim()) {
       const term = keyword.trim().toLowerCase();
@@ -178,9 +211,8 @@ export async function searchListings(params: SearchListingsParams) {
     const start = (page - 1) * limit;
     const data = results.slice(start, start + limit).map((listing) => ({
       ...listing,
-      status: getMemoryListingStatus(listing.id, listing.status as ListingStatus),
-      category: { name: 'General', slug: 'general' },
-      seller: { name: 'Local Seller', rating: 4.8, verifiedStatus: true },
+      category: listing.category ?? { name: 'General', slug: 'general' },
+      seller: listing.seller ?? { name: 'Local Seller', rating: 5.0, verifiedStatus: true },
     }));
 
     return {

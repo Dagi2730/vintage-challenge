@@ -56,7 +56,7 @@ export default async function ListingDetailPage({
                 )}
               </div>
               <div className="grid grid-cols-4 gap-2 p-3">
-                {(listing.photos.slice(0, 4) || []).map((photo, index) => (
+                {(listing.photos.slice(0, 4) || []).map((photo: string, index: number) => (
                   <img
                     key={`${listing.id}-${index}`}
                     src={photo}

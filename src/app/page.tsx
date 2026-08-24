@@ -54,12 +54,22 @@ export default async function Home() {
         </div>
 
         {listings.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500">
-            No listings yet. Be the first to{' '}
-            <Link href="/sell" className="text-blue-600 font-medium hover:underline">
-              sell an item
+          <div className="rounded-2xl border-2 border-dashed border-slate-300 bg-white p-12 text-center shadow-xs space-y-4">
+            <div className="w-16 h-16 rounded-full bg-blue-50 text-blue-600 font-black text-2xl flex items-center justify-center mx-auto">
+              📦
+            </div>
+            <div>
+              <h3 className="text-lg font-extrabold text-slate-900">No items listed for sale yet</h3>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">
+                Be the first to list an item on E-merkato! Upload real photos and start selling to local buyers in your city.
+              </p>
+            </div>
+            <Link
+              href="/sell"
+              className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-xl text-xs transition shadow-sm"
+            >
+              + Post New Item for Sale →
             </Link>
-            .
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -71,7 +81,7 @@ export default async function Home() {
               >
                 <div className="relative h-48 w-full bg-slate-100 overflow-hidden">
                   <div className="grid grid-cols-2 gap-1 h-full">
-                    {(item.photos.slice(0, 4) || []).map((photo, index) => (
+                    {(item.photos.slice(0, 4) || []).map((photo: string, index: number) => (
                       <img key={`${item.id}-${index}`} src={photo} alt={item.title} className="w-full h-24 object-cover" />
                     ))}
                   </div>

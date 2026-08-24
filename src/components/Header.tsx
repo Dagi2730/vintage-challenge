@@ -45,12 +45,14 @@ export async function Header({ showSearch = false, searchValue = '' }: HeaderPro
             >
               Dashboard
             </Link>
-            <Link
-              href="/admin"
-              className="text-sm font-semibold text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 px-3 py-1.5 rounded-lg border border-purple-200 transition flex items-center gap-1"
-            >
-              <span>⚙️</span> Admin Portal
-            </Link>
+            {session.user.role === 'ADMIN' && (
+              <Link
+                href="/admin"
+                className="text-sm font-semibold text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 px-3 py-1.5 rounded-lg border border-purple-200 transition flex items-center gap-1"
+              >
+                <span>⚙️</span> Admin Portal
+              </Link>
+            )}
             <SignOutButton />
             <Link
               href="/account"
