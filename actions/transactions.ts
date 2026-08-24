@@ -5,6 +5,8 @@ import { prisma } from '@/lib/prisma';
 import { hasDbConfiguration } from '@/lib/account-store';
 import { ListingStatus, TransactionStatus } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
+import { mockListings, mockTransactions } from '@/src/data/mockData';
+import type { Transaction } from '@/src/types';
 
 export async function createTransaction(listingId: string) {
   const session = await auth();
@@ -13,7 +15,46 @@ export async function createTransaction(listingId: string) {
   }
 
   if (!hasDbConfiguration()) {
-    throw new Error('Database is not configured. Add DATABASE_URL to complete purchases.');
+    const listing = mockListings.find((item) => item.id === listingId);
+    if (!listing) {
+      throw new Error('Listing not found.');
+    }
+
+    if (listing.status !== 'ACTIVE') {
+      throw new Error('This listing is no longer available.');
+    }
+
+    if (listing.sellerId === session.user.id) {
+      throw new Error('You cannot purchase your own listing.');
+    }
+
+    const existingTransaction = mockTransactions.find(
+      (tx) => tx.listingId === listingId && tx.buyerId === session.user.id
+    );
+
+    if (existingTransaction) {
+      return { success: true, data: existingTransaction, message: 'Transaction already exists.' };
+    }
+
+    const mockTx: Transaction = {
+      id: `tx_${Date.now()}`,
+      listingId,
+      buyerId: session.user.id,
+      sellerId: listing.sellerId,
+      amount: listing.price,
+      status: TransactionStatus.PENDING,
+      paymentGatewayRef: `chapa_mock_${Date.now()}`,
+      createdAt: new Date(),
+    };
+
+    mockTransactions.push(mockTx);
+
+    revalidatePath(`/listings/${listingId}`);
+    revalidatePath('/dashboard');
+    revalidatePath('/explore');
+    revalidatePath('/');
+
+    return { success: true, data: mockTx };
   }
 
   const listing = await prisma.listing.findUnique({
@@ -58,6 +99,8 @@ export async function createTransaction(listingId: string) {
 
   revalidatePath(`/listings/${listingId}`);
   revalidatePath('/dashboard');
+  revalidatePath('/explore');
+  revalidatePath('/');
 
   return { success: true, data: transaction };
 }
@@ -69,7 +112,46 @@ export async function completeTransaction(transactionId: string) {
   }
 
   if (!hasDbConfiguration()) {
-    throw new Error('Database is not configured.');
+    const mockTx = mockTransactions.find((tx) => tx.id === transactionId);
+    if (!mockTx) {
+      // Fallback: search by listing ID if transactionId is listingId
+      const listing = mockListings.find((item) => item.id === transactionId);
+      if (listing) {
+        listing.status = 'SOLD';
+        const fallbackTx: Transaction = {
+          id: `tx_${Date.now()}`,
+          listingId: listing.id,
+          buyerId: session.user.id,
+          sellerId: listing.sellerId,
+          amount: listing.price,
+          status: TransactionStatus.SUCCESS,
+          paymentGatewayRef: `chapa_mock_${Date.now()}`,
+          createdAt: new Date(),
+        };
+        mockTransactions.push(fallbackTx);
+
+        revalidatePath(`/listings/${listing.id}`);
+        revalidatePath('/dashboard');
+        revalidatePath('/explore');
+        revalidatePath('/');
+
+        return { success: true, data: fallbackTx };
+      }
+      throw new Error('Transaction not found.');
+    }
+
+    mockTx.status = TransactionStatus.SUCCESS;
+    const targetListing = mockListings.find((item) => item.id === mockTx.listingId);
+    if (targetListing) {
+      targetListing.status = 'SOLD';
+    }
+
+    revalidatePath(`/listings/${mockTx.listingId}`);
+    revalidatePath('/dashboard');
+    revalidatePath('/explore');
+    revalidatePath('/');
+
+    return { success: true, data: mockTx };
   }
 
   const transaction = await prisma.transaction.findUnique({
@@ -105,13 +187,45 @@ export async function completeTransaction(transactionId: string) {
 
   revalidatePath(`/listings/${transaction.listingId}`);
   revalidatePath('/dashboard');
+  revalidatePath('/explore');
+  revalidatePath('/');
 
   return { success: true, data: updated };
 }
 
 export async function getUserTransactions(userId: string) {
   if (!hasDbConfiguration()) {
-    return { purchases: [], sales: [] };
+    const purchases = mockTransactions.filter((tx) => tx.buyerId === userId);
+    const sales = mockTransactions.filter((tx) => tx.sellerId === userId);
+
+    return {
+      purchases: purchases.map((tx) => {
+        const listing = mockListings.find((item) => item.id === tx.listingId);
+        return {
+          ...tx,
+          listing: {
+            id: listing?.id ?? tx.listingId,
+            title: listing?.title ?? 'Item',
+            photos: listing?.photos ?? [],
+            price: listing?.price ?? tx.amount,
+          },
+          seller: { id: tx.sellerId, name: 'Local Seller' },
+        };
+      }),
+      sales: sales.map((tx) => {
+        const listing = mockListings.find((item) => item.id === tx.listingId);
+        return {
+          ...tx,
+          listing: {
+            id: listing?.id ?? tx.listingId,
+            title: listing?.title ?? 'Item',
+            photos: listing?.photos ?? [],
+            price: listing?.price ?? tx.amount,
+          },
+          buyer: { id: tx.buyerId, name: 'Buyer' },
+        };
+      }),
+    };
   }
 
   try {
