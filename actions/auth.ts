@@ -93,9 +93,31 @@ export async function authenticate(
       return 'Invalid credentials.';
     }
 
+    let isAdmin = email === 'admin@emerkato.com';
+    if (!isAdmin) {
+      if (!hasDbConfiguration()) {
+        const u = findMemoryUser(email);
+        if (u?.role === 'ADMIN') isAdmin = true;
+      } else {
+        try {
+          const u = await prisma.user.findUnique({ where: { email }, select: { role: true } });
+          if (u?.role === 'ADMIN') isAdmin = true;
+        } catch (e) {
+          // ignore error
+        }
+      }
+    }
+
+    if (isAdmin) {
+      redirect('/admin');
+    }
+
     redirect('/dashboard');
   } catch (error) {
-    if (error instanceof Error && error.message === 'NEXT_REDIRECT') {
+    if (
+      (error instanceof Error && error.message === 'NEXT_REDIRECT') ||
+      (typeof error === 'object' && error !== null && 'digest' in error && String((error as any).digest).startsWith('NEXT_REDIRECT'))
+    ) {
       throw error;
     }
 

@@ -57,9 +57,9 @@ export default async function AdminPage() {
           </div>
           <Link
             href="/account"
-            className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-4 py-2 rounded-xl transition"
+            className="bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 text-xs font-bold px-4 py-2 rounded-xl transition flex items-center gap-1.5"
           >
-            ← Back to Account
+            <span>⚙️</span> Admin Settings
           </Link>
         </div>
 

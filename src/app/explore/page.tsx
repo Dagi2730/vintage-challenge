@@ -1,4 +1,6 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import { auth } from '@/auth';
 import { Header } from '@/src/components/Header';
 import { getCategories } from '@/actions/categories';
 import { searchListings } from '@/actions/listings';
@@ -19,6 +21,11 @@ type ExplorePageProps = {
 };
 
 export default async function ExplorePage({ searchParams }: ExplorePageProps) {
+  const session = await auth();
+  if (session?.user?.role === 'ADMIN') {
+    redirect('/admin');
+  }
+
   const keyword = searchParams.q ?? '';
   const categorySlug = searchParams.category;
   const condition = searchParams.condition as Condition | undefined;

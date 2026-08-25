@@ -4,11 +4,13 @@ import { auth } from '@/auth';
 import { Header } from '@/src/components/Header';
 import { ReviewForm } from '@/src/components/ReviewForm';
 import { EditProfileModal } from '@/src/components/EditProfileModal';
+import { EditAdminProfileModal } from '@/src/components/EditAdminProfileModal';
 import { FaydaVerificationModal } from '@/src/components/FaydaVerificationModal';
 import { getUserListings } from '@/actions/listings';
 import { getUserTransactions } from '@/actions/transactions';
 import { getReviewableTransactions } from '@/actions/reviews';
 import { getUserProfile } from '@/actions/user';
+import { hasDbConfiguration } from '@/lib/account-store';
 import { formatCondition, formatPrice } from '@/lib/format';
 
 export default async function AccountPage() {
@@ -18,6 +20,107 @@ export default async function AccountPage() {
   }
 
   const userId = session.user.id;
+  const isAdmin = session.user.role === 'ADMIN';
+
+  if (isAdmin) {
+    const profile = await getUserProfile(userId);
+    const name = profile?.name ?? session.user.name ?? 'Platform Admin';
+    const email = profile?.email ?? session.user.email ?? 'admin@emerkato.com';
+
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col">
+        <Header />
+
+        <main className="max-w-6xl mx-auto px-6 py-10 w-full flex-1 space-y-8">
+          {/* Admin Header Card */}
+          <section className="bg-white rounded-2xl border border-purple-100 p-8 shadow-sm space-y-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 pb-6 border-b border-slate-100">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-full bg-purple-600 text-white font-black text-2xl flex items-center justify-center border-2 border-purple-400 shadow-md">
+                  {name.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <h1 className="text-2xl font-extrabold text-slate-900 flex items-center gap-2">
+                    {name}
+                    <span className="bg-purple-50 border border-purple-200 text-purple-800 text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
+                      🛡️ Platform Administrator
+                    </span>
+                  </h1>
+                  <p className="text-xs text-slate-500 mt-1">Master Account & Security Credentials</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Link
+                  href="/admin"
+                  className="bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-2xs flex items-center gap-1.5"
+                >
+                  📋 Verification Queue
+                </Link>
+                <EditAdminProfileModal initialName={name} initialEmail={email} />
+              </div>
+            </div>
+
+            {/* Admin Details Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Admin Display Name</span>
+                <p className="text-sm font-bold text-slate-900">{name}</p>
+              </div>
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Admin Email Address</span>
+                <p className="text-sm font-bold text-slate-900 truncate">{email}</p>
+              </div>
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">System Role Privileges</span>
+                <p className="text-sm font-bold text-purple-700">SUPERADMIN / FULL ACCESS</p>
+              </div>
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Database Mode</span>
+                <p className="text-sm font-bold text-slate-900">
+                  {hasDbConfiguration() ? '🟢 PostgreSQL Active' : '🟡 In-Memory Active'}
+                </p>
+              </div>
+            </div>
+          </section>
+
+          {/* Admin Management Hub Cards */}
+          <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col justify-between space-y-4">
+              <div>
+                <div className="w-12 h-12 rounded-xl bg-purple-50 border border-purple-200 text-purple-700 text-xl flex items-center justify-center mb-3">
+                  🪪
+                </div>
+                <h3 className="text-base font-bold text-slate-900">National ID (Fayda) Verification Queue</h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Review and verify submitted FAN numbers and National ID photos from sellers.
+                </p>
+              </div>
+              <Link
+                href="/admin"
+                className="inline-flex items-center justify-center bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition shadow-xs w-full"
+              >
+                Go to Verification Queue →
+              </Link>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col justify-between space-y-4">
+              <div>
+                <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 text-xl flex items-center justify-center mb-3">
+                  🔐
+                </div>
+                <h3 className="text-base font-bold text-slate-900">Admin Account & Credentials Settings</h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Update admin display name, master email address, or change account password.
+                </p>
+              </div>
+              <EditAdminProfileModal initialName={name} initialEmail={email} />
+            </div>
+          </section>
+        </main>
+      </div>
+    );
+  }
 
   const [profile, listings, transactions, reviewable] = await Promise.all([
     getUserProfile(userId),

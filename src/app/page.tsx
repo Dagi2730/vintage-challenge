@@ -1,10 +1,17 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import { auth } from '@/auth';
 import { Header } from '@/src/components/Header';
 import { getCategories } from '@/actions/categories';
 import { searchListings } from '@/actions/listings';
 import { formatCondition, formatPrice } from '@/lib/format';
 
 export default async function Home() {
+  const session = await auth();
+  if (session?.user?.role === 'ADMIN') {
+    redirect('/admin');
+  }
+
   const [categories, listingsResult] = await Promise.all([
     getCategories(),
     searchListings({ limit: 4 }),

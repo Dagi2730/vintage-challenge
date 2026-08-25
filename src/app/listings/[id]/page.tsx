@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { Header } from '@/src/components/Header';
 import { BuyButton } from '@/src/components/BuyButton';
 import { getListingById } from '@/actions/listings';
@@ -16,6 +16,10 @@ export default async function ListingDetailPage({
     getListingById(params.id),
     auth(),
   ]);
+
+  if (session?.user?.role === 'ADMIN') {
+    redirect('/admin');
+  }
 
   if (!listing) {
     notFound();

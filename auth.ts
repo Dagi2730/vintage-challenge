@@ -15,7 +15,42 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const email = String(credentials.email).trim().toLowerCase();
         const password = String(credentials.password);
 
-        // Special Admin Account Login
+        // Check DB first if DB is configured
+        if (hasDbConfiguration()) {
+          try {
+            const dbUser = await prisma.user.findUnique({ where: { email } });
+            if (dbUser && dbUser.passwordHash) {
+              const matches = await bcrypt.compare(password, dbUser.passwordHash);
+              if (matches) {
+                return {
+                  id: dbUser.id,
+                  name: dbUser.name,
+                  email: dbUser.email,
+                  role: dbUser.role,
+                  verifiedStatus: dbUser.verifiedStatus,
+                };
+              }
+            }
+          } catch (e) {
+            console.error('Error authenticating with DB:', e);
+          }
+        } else {
+          const memoryUser = findMemoryUser(email);
+          if (memoryUser && memoryUser.passwordHash) {
+            const matches = await bcrypt.compare(password, memoryUser.passwordHash);
+            if (matches) {
+              return {
+                id: memoryUser.id,
+                name: memoryUser.name,
+                email: memoryUser.email,
+                role: memoryUser.role,
+                verifiedStatus: memoryUser.verifiedStatus,
+              };
+            }
+          }
+        }
+
+        // Special Admin Account Default Login Fallback
         if (email === 'admin@emerkato.com' && (password === 'admin123password' || password === 'admin123')) {
           return {
             id: 'admin_user',
@@ -26,31 +61,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           };
         }
 
-        if (!hasDbConfiguration()) {
-          const user = findMemoryUser(email);
-          if (!user || !user.passwordHash) return null;
-
-          const passwordsMatch = await bcrypt.compare(password, user.passwordHash);
-          if (!passwordsMatch) return null;
-
-          return {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            verifiedStatus: user.verifiedStatus,
-          };
-        }
-
-        const user = await prisma.user.findUnique({
-          where: { email },
-        });
-
-        if (!user || !user.passwordHash) return null;
-
-        const passwordsMatch = await bcrypt.compare(password, user.passwordHash);
-
-        if (passwordsMatch) return user;
         return null;
       },
     }),

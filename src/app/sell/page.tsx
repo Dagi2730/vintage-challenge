@@ -1,8 +1,15 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import { auth } from '@/auth';
 import { getCategories } from '@/actions/categories';
 import { SellForm } from '@/src/app/sell/SellForm';
 
 export default async function SellPage() {
+  const session = await auth();
+  if (session?.user?.role === 'ADMIN') {
+    redirect('/admin');
+  }
+
   const categories = await getCategories();
 
   return (
