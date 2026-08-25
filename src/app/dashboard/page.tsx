@@ -2,62 +2,75 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { Header } from '@/src/components/Header';
+import { FilterBar } from '@/src/components/FilterBar';
 import { getCategories } from '@/actions/categories';
 import { searchListings } from '@/actions/listings';
 import { formatCondition, formatPrice } from '@/lib/format';
+import { Condition } from '@prisma/client';
 
-export default async function DashboardPage() {
+type DashboardPageProps = {
+  searchParams: {
+    q?: string;
+    category?: string;
+    condition?: string;
+    city?: string;
+    neighborhood?: string;
+    minPrice?: string;
+    maxPrice?: string;
+    sortBy?: 'newest' | 'price_asc' | 'price_desc';
+  };
+};
+
+export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const session = await auth();
   if (session?.user?.role === 'ADMIN') {
     redirect('/admin');
   }
 
+  const keyword = searchParams.q ?? '';
+  const categorySlug = searchParams.category;
+  const condition = searchParams.condition as Condition | undefined;
+  const city = searchParams.city;
+  const neighborhood = searchParams.neighborhood;
+  const minPrice = searchParams.minPrice ? Number(searchParams.minPrice) : undefined;
+  const maxPrice = searchParams.maxPrice ? Number(searchParams.maxPrice) : undefined;
+  const sortBy = searchParams.sortBy ?? 'newest';
+
   const [categories, listingsResult] = await Promise.all([
     getCategories(),
-    searchListings({ limit: 12 }),
+    searchListings({
+      keyword,
+      categorySlug,
+      condition,
+      city,
+      neighborhood,
+      minPrice,
+      maxPrice,
+      sortBy,
+      limit: 24,
+    }),
   ]);
 
   const listings = listingsResult.data;
+  const total = listingsResult.metadata.total;
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header />
 
-      <section className="bg-slate-100 py-16 px-6 text-center border-b border-slate-200">
-        <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4 tracking-tight">
-          Find your next treasure
-        </h1>
-        <form action="/explore" method="get" className="max-w-xl mx-auto relative mb-6">
-          <input
-            type="text"
-            name="q"
-            placeholder="Search for items..."
-            className="w-full bg-white border border-slate-300 rounded-full py-3.5 pl-12 pr-4 text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-          />
-          <svg className="w-5 h-5 text-slate-400 absolute left-4 top-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-        </form>
+      <main className="flex-1 max-w-7xl mx-auto px-6 py-8 w-full space-y-6">
+        {/* Marketplace Search & Complete Filter Controls */}
+        <FilterBar categories={categories} targetPath="/dashboard" />
 
-        <div className="flex flex-wrap justify-center gap-3">
-          {categories.map((cat) => (
-            <Link
-              key={cat.slug}
-              href={`/explore?category=${cat.slug}`}
-              className="bg-white hover:bg-blue-50 text-slate-700 hover:text-blue-600 border border-slate-200 px-5 py-2 rounded-full text-sm font-medium transition shadow-sm"
-            >
-              {cat.name}
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      <main className="flex-1 max-w-7xl mx-auto px-6 py-10 w-full">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-slate-900">Fresh Local Listings</h2>
-          <Link href="/explore" className="text-blue-600 font-medium text-sm hover:underline">
-            See all
-          </Link>
+        <div className="flex justify-between items-center pt-2">
+          <h2 className="text-xl font-extrabold text-slate-900">
+            {keyword
+              ? `Showing ${total} items for "${keyword}"`
+              : `Fresh Local Marketplace Items (${total})`}
+          </h2>
+          <span className="text-xs font-semibold text-slate-500 bg-slate-200/60 px-3 py-1 rounded-full">
+            Active Listings
+          </span>
         </div>
 
         {listings.length === 0 ? (

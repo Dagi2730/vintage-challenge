@@ -34,6 +34,8 @@ export async function getUserProfile(userId: string) {
         id: true,
         name: true,
         email: true,
+        phoneNumber: true,
+        telegramHandle: true,
         verifiedStatus: true,
         nationalIdUrl: true,
       },
@@ -43,8 +45,8 @@ export async function getUserProfile(userId: string) {
 
     return {
       ...user,
-      phoneNumber: '+251 91 123 4567',
-      telegramHandle: '@' + (user.name.toLowerCase().replace(/\s+/g, '')),
+      phoneNumber: user.phoneNumber ?? '+251 91 123 4567',
+      telegramHandle: user.telegramHandle ?? ('@' + (user.name.toLowerCase().replace(/\s+/g, ''))),
       fanNumber: null,
       verificationState: user.verifiedStatus ? 'VERIFIED' as const : 'UNVERIFIED' as const,
     };

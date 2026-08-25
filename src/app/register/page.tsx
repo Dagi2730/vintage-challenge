@@ -60,6 +60,32 @@ export default function RegisterPage() {
           </div>
 
           <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Telegram Username</label>
+            <div className="relative">
+              <input
+                type="text"
+                name="telegramHandle"
+                required
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-600 focus:outline-none pl-7"
+                placeholder="username"
+              />
+              <span className="absolute left-3 top-2 text-slate-400 text-sm font-semibold">@</span>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-1">Buyers will click this to chat with you directly on Telegram.</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Phone Number</label>
+            <input
+              type="tel"
+              name="phoneNumber"
+              required
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-600 focus:outline-none"
+              placeholder="+251 91 123 4567"
+            />
+          </div>
+
+          <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
             <input
               type="password"

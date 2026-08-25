@@ -11,10 +11,16 @@ export async function registerUser(formData: FormData) {
   const name = String(formData.get('name') ?? '').trim();
   const email = String(formData.get('email') ?? '').trim().toLowerCase();
   const password = String(formData.get('password') ?? '');
+  const rawTelegram = String(formData.get('telegramHandle') ?? '').trim();
+  const phoneNumber = String(formData.get('phoneNumber') ?? '').trim();
 
   if (!name || !email || !password) {
     return { error: 'Please fill in all required fields.' };
   }
+
+  const telegramHandle = rawTelegram
+    ? (rawTelegram.startsWith('@') ? rawTelegram : '@' + rawTelegram)
+    : '@' + name.toLowerCase().replace(/\s+/g, '');
 
   if (!hasDbConfiguration()) {
     const existingAccount = findMemoryUser(email);
@@ -27,6 +33,8 @@ export async function registerUser(formData: FormData) {
       name,
       email,
       passwordHash: hashedPassword,
+      telegramHandle,
+      phoneNumber: phoneNumber || '+251 91 123 4567',
     });
 
     if (!memoryUser) {
@@ -47,11 +55,13 @@ export async function registerUser(formData: FormData) {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    await prisma.user.create({
+    await (prisma.user as any).create({
       data: {
         name,
         email,
         passwordHash: hashedPassword,
+        telegramHandle,
+        phoneNumber: phoneNumber || '+251 91 123 4567',
       },
     });
 

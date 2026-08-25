@@ -65,6 +65,8 @@ export function createMemoryUser(input: {
   name: string;
   email: string;
   passwordHash: string;
+  phoneNumber?: string;
+  telegramHandle?: string;
 }) {
   const email = input.email.toLowerCase().trim();
 
@@ -73,14 +75,19 @@ export function createMemoryUser(input: {
     return null;
   }
 
+  const rawTelegram = (input.telegramHandle ?? '').trim();
+  const formattedTelegram = rawTelegram
+    ? (rawTelegram.startsWith('@') ? rawTelegram : '@' + rawTelegram)
+    : '@' + input.name.toLowerCase().replace(/\s+/g, '');
+
   const user: MemoryAccount = {
     id: randomUUID(),
     name: input.name,
     email,
     passwordHash: input.passwordHash,
     role: 'USER',
-    phoneNumber: '+251 91 123 4567',
-    telegramHandle: '@dagmawit',
+    phoneNumber: input.phoneNumber?.trim() || '+251 91 123 4567',
+    telegramHandle: formattedTelegram,
     verifiedStatus: false,
     rating: 0,
   };

@@ -27,7 +27,9 @@ export type SearchListingsParams = {
   minPrice?: number;
   maxPrice?: number;
   condition?: Condition;
+  city?: string;
   neighborhood?: string;
+  sortBy?: 'newest' | 'price_asc' | 'price_desc';
   page?: number;
   limit?: number;
 };
@@ -165,7 +167,9 @@ export async function searchListings(params: SearchListingsParams) {
     minPrice,
     maxPrice,
     condition,
+    city,
     neighborhood,
+    sortBy = 'newest',
     page = 1,
     limit = 20,
   } = params;
@@ -193,6 +197,12 @@ export async function searchListings(params: SearchListingsParams) {
       results = results.filter((listing) => listing.condition === condition);
     }
 
+    if (city) {
+      results = results.filter((listing) =>
+        listing.city.toLowerCase().includes(city.toLowerCase()),
+      );
+    }
+
     if (neighborhood) {
       results = results.filter((listing) =>
         listing.neighborhood.toLowerCase().includes(neighborhood.toLowerCase()),
@@ -205,6 +215,14 @@ export async function searchListings(params: SearchListingsParams) {
 
     if (maxPrice !== undefined) {
       results = results.filter((listing) => listing.price <= maxPrice);
+    }
+
+    if (sortBy === 'price_asc') {
+      results.sort((a, b) => a.price - b.price);
+    } else if (sortBy === 'price_desc') {
+      results.sort((a, b) => b.price - a.price);
+    } else {
+      results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     }
 
     const total = results.length;
@@ -251,6 +269,10 @@ export async function searchListings(params: SearchListingsParams) {
     where.condition = condition;
   }
 
+  if (city) {
+    where.city = { contains: city, mode: 'insensitive' };
+  }
+
   if (neighborhood) {
     where.neighborhood = { contains: neighborhood, mode: 'insensitive' };
   }
@@ -261,6 +283,13 @@ export async function searchListings(params: SearchListingsParams) {
     if (maxPrice !== undefined) where.price.lte = maxPrice;
   }
 
+  const orderBy =
+    sortBy === 'price_asc'
+      ? { price: 'asc' as const }
+      : sortBy === 'price_desc'
+      ? { price: 'desc' as const }
+      : { createdAt: 'desc' as const };
+
   const skip = (page - 1) * limit;
 
   try {
@@ -269,7 +298,7 @@ export async function searchListings(params: SearchListingsParams) {
         where,
         skip,
         take: limit,
-        orderBy: { createdAt: 'desc' },
+        orderBy,
         include: listingInclude,
       }),
       prisma.listing.count({ where }),
@@ -289,4 +318,34 @@ export async function searchListings(params: SearchListingsParams) {
     console.error("Error executing search:", error);
     throw new Error("Failed to search listings.");
   }
+}
+
+export async function reportListing(input: {
+  listingId: string;
+  reason: string;
+  details?: string;
+}) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { error: 'You must be logged in to report a listing.' };
+  }
+
+  const reporterId = session.user.id;
+
+  if (hasDbConfiguration()) {
+    try {
+      await (prisma as any).report.create({
+        data: {
+          listingId: input.listingId,
+          reporterId,
+          reason: input.reason,
+          details: input.details || null,
+        },
+      });
+    } catch (e) {
+      console.error('Error recording report in DB:', e);
+    }
+  }
+
+  return { success: true };
 }

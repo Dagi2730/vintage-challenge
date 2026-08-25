@@ -14,11 +14,13 @@ type BuyButtonProps = {
 
 export function BuyButton({ listingId, price, isLoggedIn, isOwner, isSold }: BuyButtonProps) {
   const router = useRouter();
+  const [isOpen, setIsOpen] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'CHAPA' | 'TELEBIRR'>('CHAPA');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function handlePurchase() {
+  async function handleCheckout() {
     if (!isLoggedIn) {
       router.push('/login');
       return;
@@ -37,8 +39,11 @@ export function BuyButton({ listingId, price, isLoggedIn, isOwner, isSold }: Buy
 
       const payment = await completeTransaction(result.data.id);
       if (payment.success) {
-        setMessage('Payment successful via Chapa. The seller has been notified.');
-        router.refresh();
+        setMessage(`Payment successful via ${paymentMethod === 'CHAPA' ? 'Chapa' : 'Telebirr'}! Seller notified.`);
+        setTimeout(() => {
+          setIsOpen(false);
+          router.refresh();
+        }, 1500);
       } else {
         setError('Payment could not be completed.');
       }
@@ -51,21 +56,15 @@ export function BuyButton({ listingId, price, isLoggedIn, isOwner, isSold }: Buy
 
   if (isSold) {
     return (
-      <div className="space-y-3">
+      <div className="space-y-2">
         <button
           type="button"
-          onClick={() => setError('This listing is no longer available.')}
-          className="w-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-600 font-bold py-3 rounded-lg text-sm text-center tracking-wide uppercase cursor-pointer transition shadow-xs flex items-center justify-center gap-2"
+          disabled
+          className="w-full bg-slate-100 border border-slate-200 text-slate-500 font-bold py-3 rounded-xl text-sm text-center tracking-wide uppercase cursor-not-allowed flex items-center justify-center gap-2"
         >
-          <span className="inline-block w-2 h-2 rounded-full bg-red-500"></span>
+          <span className="w-2 h-2 rounded-full bg-red-500"></span>
           Item Sold
         </button>
-        {error && (
-          <div className="bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium py-2.5 px-3 rounded-lg flex items-center gap-2 shadow-xs">
-            <span>ℹ️</span>
-            <span>{error}</span>
-          </div>
-        )}
       </div>
     );
   }
@@ -75,7 +74,7 @@ export function BuyButton({ listingId, price, isLoggedIn, isOwner, isSold }: Buy
       <button
         type="button"
         disabled
-        className="w-full bg-slate-100 border border-slate-200 text-slate-400 font-medium py-3 rounded-lg text-sm cursor-not-allowed"
+        className="w-full bg-slate-100 border border-slate-200 text-slate-400 font-medium py-3 rounded-xl text-sm cursor-not-allowed"
       >
         This is your listing
       </button>
@@ -83,39 +82,133 @@ export function BuyButton({ listingId, price, isLoggedIn, isOwner, isSold }: Buy
   }
 
   return (
-    <div className="space-y-3">
+    <>
       <button
         type="button"
-        onClick={handlePurchase}
-        disabled={loading}
-        className="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold py-3 rounded-lg transition shadow-sm flex items-center justify-center gap-2 text-sm disabled:opacity-60"
+        onClick={() => {
+          if (!isLoggedIn) {
+            router.push('/login');
+          } else {
+            setIsOpen(true);
+          }
+        }}
+        className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-3.5 px-6 rounded-xl transition shadow-md flex items-center justify-center gap-2 text-sm cursor-pointer"
       >
-        {loading ? (
-          <span className="flex items-center gap-2">
-            <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-            </svg>
-            Processing...
-          </span>
-        ) : (
-          `Buy with Chapa · ${price.toLocaleString()} ETB`
-        )}
+        💳 Buy Now · {price.toLocaleString()} ETB
       </button>
 
-      {message && (
-        <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold py-2.5 px-3 rounded-lg flex items-center gap-2 shadow-xs">
-          <span>🎉</span>
-          <span>{message}</span>
-        </div>
-      )}
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-5">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <span>🛍️</span> Secure Payment Checkout
+                </h3>
+                <p className="text-xs text-slate-500">Select your preferred Ethiopian payment gateway</p>
+              </div>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="text-slate-400 hover:text-slate-600 text-lg font-bold p-1"
+              >
+                ✕
+              </button>
+            </div>
 
-      {error && (
-        <div className="bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium py-2.5 px-3 rounded-lg flex items-center gap-2 shadow-xs">
-          <span>ℹ️</span>
-          <span>{error}</span>
+            {message ? (
+              <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-xl text-center space-y-2">
+                <div className="text-3xl">🎉</div>
+                <p className="text-sm font-bold">{message}</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {error && (
+                  <div className="bg-red-50 text-red-700 text-xs p-3 rounded-lg font-medium border border-red-200">
+                    ⚠️ {error}
+                  </div>
+                )}
+
+                <div className="space-y-3">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
+                    Select Payment Gateway
+                  </label>
+
+                  <div
+                    onClick={() => setPaymentMethod('CHAPA')}
+                    className={`p-4 rounded-xl border-2 cursor-pointer transition flex items-center justify-between ${
+                      paymentMethod === 'CHAPA'
+                        ? 'border-blue-600 bg-blue-50/50 shadow-xs'
+                        : 'border-slate-200 hover:border-slate-300 bg-white'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-emerald-600 text-white font-black text-sm flex items-center justify-center shadow-xs">
+                        CH
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-slate-900">Chapa Ethiopia</p>
+                        <p className="text-xs text-slate-500">Debit / Credit Card & Mobile Banking</p>
+                      </div>
+                    </div>
+                    <span className="text-xs font-bold text-blue-600">
+                      {paymentMethod === 'CHAPA' ? '✓ Selected' : ''}
+                    </span>
+                  </div>
+
+                  <div
+                    onClick={() => setPaymentMethod('TELEBIRR')}
+                    className={`p-4 rounded-xl border-2 cursor-pointer transition flex items-center justify-between ${
+                      paymentMethod === 'TELEBIRR'
+                        ? 'border-blue-600 bg-blue-50/50 shadow-xs'
+                        : 'border-slate-200 hover:border-slate-300 bg-white'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-blue-600 text-white font-black text-sm flex items-center justify-center shadow-xs">
+                        tb
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-slate-900">Telebirr Mobile Money</p>
+                        <p className="text-xs text-slate-500">Ethio Telecom Quick Checkout</p>
+                      </div>
+                    </div>
+                    <span className="text-xs font-bold text-blue-600">
+                      {paymentMethod === 'TELEBIRR' ? '✓ Selected' : ''}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-200 text-xs text-slate-600 flex justify-between items-center">
+                  <span>Total Payable Amount:</span>
+                  <span className="text-base font-extrabold text-slate-900">{price.toLocaleString()} ETB</span>
+                </div>
+
+                <div className="flex items-center justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsOpen(false)}
+                    className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCheckout}
+                    disabled={loading}
+                    className="px-6 py-2.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white transition disabled:opacity-50 shadow-xs flex items-center gap-2"
+                  >
+                    {loading ? (
+                      <span>Processing...</span>
+                    ) : (
+                      `Confirm & Pay with ${paymentMethod === 'CHAPA' ? 'Chapa' : 'Telebirr'}`
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { createListing } from '@/actions/listings';
 import type { Category } from '@/src/types';
+import { CITIES, getNeighborhoodsForCity } from '@/src/lib/location-data';
 
 const conditionOptions = ['BRAND_NEW', 'LIKE_NEW', 'LIGHTLY_USED', 'FAIR'] as const;
 type ConditionValue = (typeof conditionOptions)[number];
@@ -22,9 +23,13 @@ type SellFormProps = {
 export function SellForm({ categories }: SellFormProps) {
   const [condition, setCondition] = useState<ConditionValue>('LIGHTLY_USED');
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [city, setCity] = useState('Addis Ababa');
+  const [neighborhood, setNeighborhood] = useState('Bole');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const availableNeighborhoods = getNeighborhoodsForCity(city);
 
   function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? []);
@@ -152,19 +157,48 @@ export function SellForm({ categories }: SellFormProps) {
 
       <div className="space-y-4">
         <label className="block text-sm font-semibold text-slate-900">4. Logistics</label>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className="block text-xs font-medium text-slate-600 mb-1">Price (ETB)</label>
             <input name="price" type="number" min="1" required placeholder="0.00" className="w-full bg-white border border-slate-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Neighborhood</label>
-            <input name="neighborhood" type="text" required placeholder="e.g., Bole" className="w-full bg-white border border-slate-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+            <label className="block text-xs font-medium text-slate-600 mb-1">City</label>
+            <select
+              name="city"
+              value={city}
+              onChange={(e) => {
+                const newCity = e.target.value;
+                setCity(newCity);
+                const nextNeighs = getNeighborhoodsForCity(newCity);
+                setNeighborhood(nextNeighs[0] ?? '');
+              }}
+              required
+              className="w-full bg-white border border-slate-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            >
+              {CITIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
           </div>
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">City</label>
-          <input name="city" type="text" required defaultValue="Addis Ababa" className="w-full bg-white border border-slate-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">Subcity / Area</label>
+            <select
+              name="neighborhood"
+              value={neighborhood}
+              onChange={(e) => setNeighborhood(e.target.value)}
+              required
+              className="w-full bg-white border border-slate-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            >
+              {availableNeighborhoods.map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
