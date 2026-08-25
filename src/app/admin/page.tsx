@@ -33,11 +33,47 @@ export default async function AdminPage() {
     }));
   } else {
     try {
-      users = await prisma.user.findMany({
+      const dbUsers = await prisma.user.findMany({
         orderBy: { createdAt: 'desc' },
       });
+      const vRecords = getAllVerificationRecords();
+      const map = new Map<string, any>();
+      for (const rec of vRecords) {
+        map.set(rec.userId, {
+          id: rec.userId,
+          name: rec.userName,
+          email: rec.userEmail,
+          fanNumber: rec.fanNumber,
+          nationalIdUrl: rec.nationalIdUrl,
+          verificationState: rec.verificationState,
+          verifiedStatus: rec.verificationState === 'VERIFIED',
+        });
+      }
+      for (const u of dbUsers) {
+        if (!map.has(u.id)) {
+          map.set(u.id, {
+            id: u.id,
+            name: u.name,
+            email: u.email,
+            fanNumber: u.phoneNumber ?? '123456789012',
+            nationalIdUrl: u.nationalIdUrl || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80',
+            verificationState: u.verifiedStatus ? 'VERIFIED' : 'UNVERIFIED',
+            verifiedStatus: u.verifiedStatus,
+          });
+        }
+      }
+      users = Array.from(map.values());
     } catch (e) {
-      users = mockUsers;
+      const vRecords = getAllVerificationRecords();
+      users = vRecords.map((rec) => ({
+        id: rec.userId,
+        name: rec.userName,
+        email: rec.userEmail,
+        fanNumber: rec.fanNumber,
+        nationalIdUrl: rec.nationalIdUrl,
+        verificationState: rec.verificationState,
+        verifiedStatus: rec.verificationState === 'VERIFIED',
+      }));
     }
   }
 
