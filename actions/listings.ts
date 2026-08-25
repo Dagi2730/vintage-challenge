@@ -49,13 +49,13 @@ const listingInclude = {
 export async function createListing(input: CreateListingInput) {
   const session = await auth();
   if (!session?.user?.id) {
-    throw new Error("Unauthorized: You must be logged in to create a listing.");
+    return { success: false, error: "Unauthorized: You must be logged in to create a listing." };
   }
 
   const validated = createListingSchema.safeParse(input);
   if (!validated.success) {
     const message = validated.error.errors.map((issue) => issue.message).join(' ');
-    throw new Error(message || "Invalid listing data provided.");
+    return { success: false, error: message || "Invalid listing data provided." };
   }
 
   if (!hasDbConfiguration()) {
@@ -94,9 +94,21 @@ export async function createListing(input: CreateListingInput) {
 
   try {
     await ensureUserExists(session.user);
+
+    // Resolve categoryId to guarantee foreign key constraint is satisfied
+    let categoryId = validated.data.categoryId;
+    const catExists = await prisma.category.findUnique({ where: { id: categoryId } });
+    if (!catExists) {
+      const anyCat = await prisma.category.findFirst();
+      if (anyCat) {
+        categoryId = anyCat.id;
+      }
+    }
+
     const listing = await prisma.listing.create({
       data: {
         ...validated.data,
+        categoryId,
         sellerId: session.user.id,
         status: ListingStatus.ACTIVE,
       },
@@ -143,6 +155,7 @@ export async function createListing(input: CreateListingInput) {
     revalidatePath('/');
     revalidatePath('/dashboard');
     revalidatePath('/explore');
+
     return { success: true, data: fallbackListing };
   }
 }

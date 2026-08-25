@@ -138,7 +138,7 @@ export function SellForm({ categories }: SellFormProps) {
           router.push('/dashboard');
         }
       } else {
-        setError('Unable to publish listing.');
+        setError(result?.error || 'Unable to publish listing.');
       }
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : 'Unable to publish listing.');
