@@ -11,52 +11,18 @@ export async function Header({ showSearch = false, searchValue = '' }: HeaderPro
   const session = await auth();
   const isAdmin = session?.user?.role === 'ADMIN';
 
-  if (isAdmin) {
-    return (
-      <header className="bg-white border-b border-purple-100 px-6 py-4 flex items-center justify-between sticky top-0 z-50 shadow-2xs">
-        <div className="flex items-center gap-3">
-          <Link href="/admin" className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-            <span className="text-purple-600">E-merkato</span>
-            <span className="bg-purple-100 text-purple-800 text-[10px] uppercase font-extrabold px-2.5 py-0.5 rounded-md border border-purple-200">
-              Admin Portal
-            </span>
-          </Link>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <Link
-            href="/admin"
-            className="text-xs font-bold text-slate-700 hover:text-purple-600 transition flex items-center gap-1 px-3 py-1.5 rounded-lg hover:bg-slate-50"
-          >
-            📋 Verification Queue
-          </Link>
-
-          <Link
-            href="/account"
-            className="text-xs font-bold text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 px-3 py-1.5 rounded-lg border border-purple-200 transition flex items-center gap-1.5"
-          >
-            <span>⚙️</span> Admin Settings
-          </Link>
-
-          <SignOutButton />
-
-          <Link
-            href="/account"
-            className="w-8 h-8 rounded-full bg-purple-600 hover:bg-purple-700 text-white flex items-center justify-center text-xs font-black transition shadow-xs cursor-pointer"
-            title="Admin Account Settings"
-          >
-            {session.user.name?.charAt(0).toUpperCase() ?? 'A'}
-          </Link>
-        </div>
-      </header>
-    );
-  }
-
   return (
-    <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between sticky top-0 z-50">
-      <Link href="/" className="text-xl font-bold text-blue-600 tracking-tight">
-        E-merkato
-      </Link>
+    <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between sticky top-0 z-50 shadow-2xs">
+      <div className="flex items-center gap-3">
+        <Link href="/" className="text-xl font-bold text-blue-600 tracking-tight">
+          E-merkato
+        </Link>
+        {isAdmin && (
+          <span className="bg-purple-100 text-purple-800 text-[10px] uppercase font-black px-2.5 py-0.5 rounded-md border border-purple-200">
+            Admin
+          </span>
+        )}
+      </div>
 
       <div className="flex items-center gap-4">
         {showSearch && (
@@ -87,10 +53,24 @@ export async function Header({ showSearch = false, searchValue = '' }: HeaderPro
             >
               Dashboard
             </Link>
+
+            {isAdmin && (
+              <Link
+                href="/admin"
+                className="bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold text-xs px-3 py-2 rounded-lg border border-purple-200 transition flex items-center gap-1.5 shadow-2xs"
+              >
+                <span>⚙️</span> Admin Portal
+              </Link>
+            )}
+
             <SignOutButton />
             <Link
               href="/account"
-              className="w-8 h-8 rounded-full bg-blue-100 hover:bg-blue-200 border border-blue-200 flex items-center justify-center text-xs font-bold text-blue-700 transition shadow-xs cursor-pointer"
+              className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition shadow-xs cursor-pointer ${
+                isAdmin
+                  ? 'bg-purple-600 text-white hover:bg-purple-700'
+                  : 'bg-blue-100 hover:bg-blue-200 border border-blue-200 text-blue-700'
+              }`}
               title="Account Settings & Profile"
             >
               {session.user.name?.charAt(0).toUpperCase() ?? 'U'}
