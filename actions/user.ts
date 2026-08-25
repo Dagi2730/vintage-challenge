@@ -52,17 +52,6 @@ export async function getUserProfile(userId: string) {
   try {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phoneNumber: true,
-        telegramHandle: true,
-        fanNumber: true,
-        verificationState: true,
-        verifiedStatus: true,
-        nationalIdUrl: true,
-      },
     });
 
     if (!user) {
@@ -81,13 +70,15 @@ export async function getUserProfile(userId: string) {
       };
     }
 
-    const vState = (vRecord?.verificationState ?? user.verificationState ?? (user.verifiedStatus ? 'VERIFIED' : 'UNVERIFIED')) as any;
+    const vState = (vRecord?.verificationState ?? (user as any).verificationState ?? (user.verifiedStatus ? 'VERIFIED' : 'UNVERIFIED')) as any;
 
     return {
-      ...user,
+      id: user.id,
+      name: user.name,
+      email: user.email,
       phoneNumber: user.phoneNumber ?? '',
       telegramHandle: user.telegramHandle ?? '',
-      fanNumber: vRecord?.fanNumber ?? user.fanNumber ?? null,
+      fanNumber: vRecord?.fanNumber ?? (user as any).fanNumber ?? null,
       nationalIdUrl: vRecord?.nationalIdUrl ?? user.nationalIdUrl ?? null,
       verificationState: vState,
       verifiedStatus: vState === 'VERIFIED',

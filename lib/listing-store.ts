@@ -28,6 +28,11 @@ export function saveMemoryListing(listing: any) {
   return listing;
 }
 
+export function deleteMemoryListing(id: string) {
+  globalListingsStore.delete(id);
+  globalStatusStore.delete(id);
+}
+
 export function getAllMemoryListings(): any[] {
   const custom = Array.from(globalListingsStore.values());
   const all = [...mockListings, ...custom];

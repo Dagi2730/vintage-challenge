@@ -8,9 +8,6 @@ import { formatCondition, formatPrice } from '@/lib/format';
 
 export default async function Home() {
   const session = await auth();
-  if (session?.user?.role === 'ADMIN') {
-    redirect('/admin');
-  }
 
   const [categories, listingsResult] = await Promise.all([
     getCategories(),

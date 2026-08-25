@@ -6,8 +6,8 @@ import { SellForm } from '@/src/app/sell/SellForm';
 
 export default async function SellPage() {
   const session = await auth();
-  if (session?.user?.role === 'ADMIN') {
-    redirect('/admin');
+  if (!session?.user?.id) {
+    redirect('/login');
   }
 
   const categories = await getCategories();

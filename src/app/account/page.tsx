@@ -4,6 +4,7 @@ import { auth } from '@/auth';
 import { Header } from '@/src/components/Header';
 import { ReviewForm } from '@/src/components/ReviewForm';
 import { EditProfileModal } from '@/src/components/EditProfileModal';
+import { DeleteListingButton } from '@/src/components/DeleteListingButton';
 import { EditAdminProfileModal } from '@/src/components/EditAdminProfileModal';
 import { FaydaVerificationModal } from '@/src/components/FaydaVerificationModal';
 import { getUserListings } from '@/actions/listings';
@@ -268,31 +269,35 @@ export default async function AccountPage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {listings.map((listing) => (
-                <Link
+                <div
                   key={listing.id}
-                  href={`/listings/${listing.id}`}
-                  className="rounded-xl border border-slate-200 bg-white overflow-hidden hover:shadow-md transition flex flex-col group"
+                  className="rounded-xl border border-slate-200 bg-white overflow-hidden hover:shadow-md transition flex flex-col justify-between group"
                 >
-                  <div className="relative h-40 w-full bg-slate-100 overflow-hidden">
-                    <img src={listing.photos[0]} alt={listing.title} className="h-full w-full object-cover group-hover:scale-105 transition" />
-                    {listing.status === 'SOLD' && (
-                      <span className="absolute top-3 right-3 bg-red-600 text-white text-[11px] font-black tracking-wider px-2.5 py-1 rounded-md shadow-md uppercase border border-red-700 z-10 flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
-                        SOLD
-                      </span>
-                    )}
+                  <Link href={`/listings/${listing.id}`}>
+                    <div className="relative h-40 w-full bg-slate-100 overflow-hidden">
+                      <img src={listing.photos[0]} alt={listing.title} className="h-full w-full object-cover group-hover:scale-105 transition" />
+                      {listing.status === 'SOLD' && (
+                        <span className="absolute top-3 right-3 bg-red-600 text-white text-[11px] font-black tracking-wider px-2.5 py-1 rounded-md shadow-md uppercase border border-red-700 z-10 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
+                          SOLD
+                        </span>
+                      )}
+                    </div>
+                    <div className="p-4">
+                      <p className="text-sm font-bold text-slate-900 line-clamp-1">{listing.title}</p>
+                      <p className="text-sm font-extrabold text-slate-800 mt-1">{formatPrice(listing.price)}</p>
+                      <p className="text-xs text-slate-500 mt-2 flex items-center justify-between">
+                        <span>{formatCondition(listing.condition)}</span>
+                        <span className={`font-semibold px-2 py-0.5 rounded text-[10px] ${listing.status === 'SOLD' ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}>
+                          {listing.status}
+                        </span>
+                      </p>
+                    </div>
+                  </Link>
+                  <div className="p-3 border-t border-slate-100 bg-slate-50/50">
+                    <DeleteListingButton listingId={listing.id} redirectAfterDelete={false} />
                   </div>
-                  <div className="p-4">
-                    <p className="text-sm font-bold text-slate-900 line-clamp-1">{listing.title}</p>
-                    <p className="text-sm font-extrabold text-slate-800 mt-1">{formatPrice(listing.price)}</p>
-                    <p className="text-xs text-slate-500 mt-2 flex items-center justify-between">
-                      <span>{formatCondition(listing.condition)}</span>
-                      <span className={`font-semibold px-2 py-0.5 rounded text-[10px] ${listing.status === 'SOLD' ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}>
-                        {listing.status}
-                      </span>
-                    </p>
-                  </div>
-                </Link>
+                </div>
               ))}
             </div>
           )}

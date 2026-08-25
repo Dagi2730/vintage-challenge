@@ -9,6 +9,7 @@ import { mockCategories } from '@/src/data/mockData';
 import {
   saveMemoryListing,
   getAllMemoryListings,
+  deleteMemoryListing,
 } from '@/lib/listing-store';
 import { revalidatePath } from 'next/cache';
 import { ensureUserExists } from '@/actions/user';
@@ -21,7 +22,7 @@ const createListingSchema = z.object({
   city: z.string().min(1, "City is required."),
   neighborhood: z.string().min(1, "Neighborhood is required."),
   categoryId: z.string().min(1, "Category is required."),
-  photos: z.array(z.string().url("Must be valid image URLs.")).min(3, "At least three photos are required.").max(5, "You may upload up to five photos."),
+  photos: z.array(z.string().min(1, "Photo URL or image data required.")).min(3, "At least three photos are required.").max(5, "You may upload up to five photos."),
 });
 
 export type CreateListingInput = z.infer<typeof createListingSchema>;
@@ -386,4 +387,36 @@ export async function reportListing(input: {
   }
 
   return { success: true };
+}
+
+export async function deleteListing(id: string) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized: You must be logged in to delete a listing.');
+  }
+
+  const userId = session.user.id;
+  const isAdmin = session.user.role === 'ADMIN';
+
+  // Delete from memory store
+  deleteMemoryListing(id);
+
+  if (hasDbConfiguration()) {
+    try {
+      const listing = await prisma.listing.findUnique({ where: { id } });
+      if (listing && (listing.sellerId === userId || isAdmin)) {
+        await prisma.transaction.deleteMany({ where: { listingId: id } });
+        await prisma.report.deleteMany({ where: { listingId: id } });
+        await prisma.listing.delete({ where: { id } });
+      }
+    } catch (error) {
+      console.error('Error deleting listing from DB:', error);
+    }
+  }
+
+  revalidatePath('/');
+  revalidatePath('/dashboard');
+  revalidatePath('/explore');
+  revalidatePath('/account');
+  return { success: true, message: 'Listing deleted successfully.' };
 }

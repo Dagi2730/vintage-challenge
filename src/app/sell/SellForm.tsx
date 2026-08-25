@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { createListing } from '@/actions/listings';
 import type { Category } from '@/src/types';
 import { CITIES, getNeighborhoodsForCity } from '@/src/lib/location-data';
@@ -21,6 +22,7 @@ type SellFormProps = {
 };
 
 export function SellForm({ categories }: SellFormProps) {
+  const router = useRouter();
   const [condition, setCondition] = useState<ConditionValue>('LIGHTLY_USED');
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [city, setCity] = useState('Addis Ababa');
@@ -31,7 +33,40 @@ export function SellForm({ categories }: SellFormProps) {
 
   const availableNeighborhoods = getNeighborhoodsForCity(city);
 
-  function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
+  function compressImage(file: File): Promise<string> {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = document.createElement('img');
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const maxDim = 800;
+          let width = img.width;
+          let height = img.height;
+          if (width > height) {
+            if (width > maxDim) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            }
+          } else {
+            if (height > maxDim) {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.82));
+        };
+        img.src = e.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? []);
 
     if (files.length > 5) {
@@ -40,13 +75,19 @@ export function SellForm({ categories }: SellFormProps) {
     }
 
     if (files.length < 3) {
-      setError('Please add at least 3 photos to publish a listing.');
+      setError('Please select at least 3 photos to publish a listing.');
       return;
     }
 
-    const previews = files.slice(0, 5).map((file) => URL.createObjectURL(file));
-    setSelectedImages(previews);
     setError(null);
+    try {
+      const compressed = await Promise.all(
+        files.slice(0, 5).map((file) => compressImage(file))
+      );
+      setSelectedImages(compressed);
+    } catch (e) {
+      setError('Error reading images. Please try again.');
+    }
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -55,11 +96,16 @@ export function SellForm({ categories }: SellFormProps) {
     setError(null);
     setMessage(null);
 
-    const formData = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const formData = new FormData(formElement);
 
-    const photos = selectedImages.length > 0
-      ? selectedImages.map((_, index) => photoPool[index % photoPool.length])
-      : photoPool.slice(0, 3);
+    if (selectedImages.length < 3 || selectedImages.length > 5) {
+      setError('Please select between 3 and 5 photos for your listing.');
+      setLoading(false);
+      return;
+    }
+
+    const photos = selectedImages;
 
     if (photos.length < 3 || photos.length > 5) {
       setError('A listing must include between 3 and 5 photos.');
@@ -81,9 +127,16 @@ export function SellForm({ categories }: SellFormProps) {
     try {
       const result = await createListing(payload);
       if (result?.success) {
-        setMessage('Listing published successfully.');
+        setMessage('Listing published successfully! Redirecting...');
         setSelectedImages([]);
-        event.currentTarget.reset();
+        if (formElement) {
+          formElement.reset();
+        }
+        if (result.data?.id) {
+          router.push(`/listings/${result.data.id}`);
+        } else {
+          router.push('/dashboard');
+        }
       } else {
         setError('Unable to publish listing.');
       }

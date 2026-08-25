@@ -23,9 +23,6 @@ type DashboardPageProps = {
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const session = await auth();
-  if (session?.user?.role === 'ADMIN') {
-    redirect('/admin');
-  }
 
   const keyword = searchParams.q ?? '';
   const categorySlug = searchParams.category;

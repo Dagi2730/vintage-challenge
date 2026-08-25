@@ -23,9 +23,6 @@ type ExplorePageProps = {
 
 export default async function ExplorePage({ searchParams }: ExplorePageProps) {
   const session = await auth();
-  if (session?.user?.role === 'ADMIN') {
-    redirect('/admin');
-  }
 
   const keyword = searchParams.q ?? '';
   const categorySlug = searchParams.category;

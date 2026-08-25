@@ -1,12 +1,13 @@
 import Link from 'next/link';
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import { Header } from '@/src/components/Header';
 import { BuyButton } from '@/src/components/BuyButton';
+import { DeleteListingButton } from '@/src/components/DeleteListingButton';
 import { ReportListingModal } from '@/src/components/ReportListingModal';
 import { getListingById } from '@/actions/listings';
 import { getSellerReviews } from '@/actions/reviews';
 import { auth } from '@/auth';
-import { formatCondition, formatPrice, formatRelativeDate } from '@/lib/format';
+import { formatCondition, formatPrice } from '@/lib/format';
 
 export default async function ListingDetailPage({
   params,
@@ -17,10 +18,6 @@ export default async function ListingDetailPage({
     getListingById(params.id),
     auth(),
   ]);
-
-  if (session?.user?.role === 'ADMIN') {
-    redirect('/admin');
-  }
 
   if (!listing) {
     notFound();
@@ -147,6 +144,10 @@ export default async function ListingDetailPage({
                 </a>
 
                 <ReportListingModal listingId={listing.id} listingTitle={listing.title} />
+
+                {(isOwner || session?.user?.role === 'ADMIN') && (
+                  <DeleteListingButton listingId={listing.id} redirectAfterDelete={true} />
+                )}
               </div>
             </section>
 
