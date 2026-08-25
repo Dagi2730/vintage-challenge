@@ -7,6 +7,8 @@ import { hasDbConfiguration } from '@/lib/account-store';
 import { prisma } from '@/lib/prisma';
 import { adminApproveVerification, adminDeclineVerification } from '@/actions/fayda';
 import { getAllVerificationRecords } from '@/lib/verification-store';
+import { searchListings } from '@/actions/listings';
+import { DeleteListingButton } from '@/src/components/DeleteListingButton';
 
 export default async function AdminPage() {
   const session = await auth();
@@ -77,6 +79,9 @@ export default async function AdminPage() {
     }
   }
 
+  const listingsRes = await searchListings({ limit: 100 });
+  const allListings = listingsRes?.data ?? [];
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header />
@@ -85,10 +90,10 @@ export default async function AdminPage() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
           <div>
             <h1 className="text-2xl font-extrabold text-slate-900 flex items-center gap-2">
-              <span>⚙️</span> Admin National ID (Fayda) Verification Management
+              <span>⚙️</span> Admin Management Portal
             </h1>
             <p className="text-xs text-slate-500 mt-1">
-              Review submitted FAN numbers & National ID photographs to approve or decline user verification requests.
+              Review Fayda National ID verification requests & moderate all active marketplace listings.
             </p>
           </div>
           <Link
@@ -99,6 +104,7 @@ export default async function AdminPage() {
           </Link>
         </div>
 
+        {/* National ID Verification Queue */}
         <section className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
           <div className="p-6 border-b border-slate-100 flex justify-between items-center">
             <h2 className="text-base font-bold text-slate-900">National ID Verification Queue</h2>
@@ -138,7 +144,7 @@ export default async function AdminPage() {
                         <a href={u.nationalIdUrl} target="_blank" rel="noreferrer" className="block group">
                           <img
                             src={u.nationalIdUrl}
-                            alt="National ID"
+                            alt="ID Document"
                             className="h-12 w-20 object-cover rounded-lg border border-slate-300 shadow-xs group-hover:scale-105 transition"
                           />
                           <span className="text-[10px] text-blue-600 hover:underline mt-0.5 block">View Photo 🔍</span>
@@ -201,6 +207,60 @@ export default async function AdminPage() {
               </tbody>
             </table>
           </div>
+        </section>
+
+        {/* Marketplace Listings Moderation Panel */}
+        <section className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+          <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+            <div>
+              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <span>🛡️</span> All Marketplace Listings Moderation
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Administrators can inspect and remove any inappropriate or reported listing post.
+              </p>
+            </div>
+            <span className="text-xs font-bold text-purple-700 bg-purple-50 px-3 py-1 rounded-full border border-purple-200">
+              {allListings.length} Total Posts
+            </span>
+          </div>
+
+          {allListings.length === 0 ? (
+            <div className="p-8 text-center text-xs text-slate-400">
+              No active listings found in the marketplace.
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {allListings.map((item) => (
+                <div key={item.id} className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:bg-slate-50 transition">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="h-16 w-16 rounded-xl bg-slate-100 overflow-hidden border border-slate-200 flex-shrink-0">
+                      {item.photos?.[0] ? (
+                        <img src={item.photos[0]} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="h-full w-full flex items-center justify-center text-slate-300 text-xs">No img</div>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <Link href={`/listings/${item.id}`} className="text-sm font-bold text-slate-900 hover:text-blue-600 line-clamp-1">
+                        {item.title}
+                      </Link>
+                      <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-2">
+                        <span>Seller: <strong>{item.seller?.name ?? 'Seller'}</strong></span>
+                        <span>·</span>
+                        <span>ETB {item.price?.toLocaleString()}</span>
+                        <span>·</span>
+                        <span>{item.city}, {item.neighborhood}</span>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="w-full sm:w-auto">
+                    <DeleteListingButton listingId={item.id} redirectAfterDelete={false} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
       </main>
     </div>
