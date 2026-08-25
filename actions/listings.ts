@@ -12,7 +12,7 @@ import {
   deleteMemoryListing,
 } from '@/lib/listing-store';
 import { revalidatePath } from 'next/cache';
-import { ensureUserExists } from '@/actions/user';
+import { ensureUserExists, getUserProfile } from '@/actions/user';
 
 const createListingSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters long."),
@@ -148,32 +148,38 @@ export async function createListing(input: CreateListingInput) {
 }
 
 export async function getListingById(id: string) {
+  let listing: any = null;
+
   if (!hasDbConfiguration()) {
     const allListings = getAllMemoryListings();
-    const listing = allListings.find((item) => item.id === id);
-    if (!listing) return null;
-
-    return {
-      ...listing,
-      category: listing.category ?? { name: 'General', slug: 'general' },
-      seller: listing.seller ?? {
-        id: listing.sellerId,
-        name: 'Local Seller',
-        rating: 5.0,
-        verifiedStatus: true,
-      },
-    };
+    listing = allListings.find((item) => item.id === id);
+  } else {
+    try {
+      listing = await prisma.listing.findUnique({
+        where: { id },
+        include: listingInclude,
+      });
+    } catch (error) {
+      console.error("Error fetching listing:", error);
+    }
   }
 
-  try {
-    return await prisma.listing.findUnique({
-      where: { id },
-      include: listingInclude,
-    });
-  } catch (error) {
-    console.error("Error fetching listing:", error);
-    return null;
-  }
+  if (!listing) return null;
+
+  const sellerProfile = await getUserProfile(listing.sellerId);
+
+  return {
+    ...listing,
+    category: listing.category ?? { name: 'General', slug: 'general' },
+    seller: {
+      id: listing.sellerId,
+      name: sellerProfile.name || listing.seller?.name || 'Local Seller',
+      rating: listing.seller?.rating ?? 5.0,
+      verifiedStatus: sellerProfile.verifiedStatus,
+      phoneNumber: sellerProfile.phoneNumber || (listing.seller as any)?.phoneNumber || '',
+      telegramHandle: sellerProfile.telegramHandle || (listing.seller as any)?.telegramHandle || '',
+    },
+  };
 }
 
 export async function getUserListings(userId: string) {

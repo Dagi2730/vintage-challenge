@@ -30,10 +30,11 @@ export default async function ListingDetailPage({
   const isOwner = session?.user?.id === listing.sellerId;
   const isSold = listing.status === 'SOLD';
 
-  const rawTelegram = (listing.seller as any)?.telegramHandle || `@${listing.seller?.name?.toLowerCase().replace(/\s+/g, '') || 'user'}`;
+  const rawTelegram = (listing.seller as any)?.telegramHandle || '';
+  const displayTelegram = rawTelegram ? (rawTelegram.startsWith('@') ? rawTelegram : `@${rawTelegram}`) : '';
   const cleanTelegram = rawTelegram.replace(/^@/, '');
-  const telegramUrl = `https://t.me/${cleanTelegram}`;
-  const sellerPhone = (listing.seller as any)?.phoneNumber || '+251 91 123 4567';
+  const telegramUrl = cleanTelegram ? `https://t.me/${cleanTelegram}` : '#';
+  const sellerPhone = (listing.seller as any)?.phoneNumber || '';
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
@@ -127,21 +128,33 @@ export default async function ListingDetailPage({
                   isSold={isSold}
                 />
                 
-                <a
-                  href={telegramUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-3 px-4 rounded-xl transition shadow-xs flex items-center justify-center gap-2 text-sm"
-                >
-                  <span>💬</span> Chat on Telegram ({rawTelegram})
-                </a>
+                {displayTelegram ? (
+                  <a
+                    href={telegramUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-3 px-4 rounded-xl transition shadow-xs flex items-center justify-center gap-2 text-sm"
+                  >
+                    <span>💬</span> Chat on Telegram ({displayTelegram})
+                  </a>
+                ) : (
+                  <div className="w-full bg-slate-100 text-slate-400 font-medium py-3 px-4 rounded-xl text-xs text-center border border-slate-200">
+                    💬 Telegram handle not provided
+                  </div>
+                )}
 
-                <a
-                  href={`tel:${sellerPhone}`}
-                  className="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-3 px-4 rounded-xl transition border border-slate-300 flex items-center justify-center gap-2 text-sm"
-                >
-                  <span>📞</span> Call Seller ({sellerPhone})
-                </a>
+                {sellerPhone ? (
+                  <a
+                    href={`tel:${sellerPhone}`}
+                    className="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-3 px-4 rounded-xl transition border border-slate-300 flex items-center justify-center gap-2 text-sm"
+                  >
+                    <span>📞</span> Call Seller ({sellerPhone})
+                  </a>
+                ) : (
+                  <div className="w-full bg-slate-100 text-slate-400 font-medium py-3 px-4 rounded-xl text-xs text-center border border-slate-200">
+                    📞 Phone number not provided
+                  </div>
+                )}
 
                 <ReportListingModal listingId={listing.id} listingTitle={listing.title} />
 
