@@ -17,7 +17,7 @@ export default async function Home() {
     searchListings({ limit: 4 }),
   ]);
 
-  const listings = listingsResult.data;
+  const listings = listingsResult?.data || [];
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
@@ -40,7 +40,7 @@ export default async function Home() {
         </form>
 
         <div className="flex flex-wrap justify-center gap-3">
-          {categories.map((cat) => (
+          {(categories || []).map((cat) => (
             <Link
               key={cat.slug}
               href={`/explore?category=${cat.slug}`}
@@ -80,44 +80,49 @@ export default async function Home() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {listings.map((item) => (
-              <Link
-                key={item.id}
-                href={`/listings/${item.id}`}
-                className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition flex flex-col group"
-              >
-                <div className="relative h-48 w-full bg-slate-100 overflow-hidden">
-                  <div className="grid grid-cols-2 gap-1 h-full">
-                    {(item.photos.slice(0, 4) || []).map((photo: string, index: number) => (
-                      <img key={`${item.id}-${index}`} src={photo} alt={item.title} className="w-full h-24 object-cover" />
-                    ))}
-                  </div>
-                  <span className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-slate-800 text-xs font-semibold px-2.5 py-1 rounded-md shadow-xs">
-                    {formatCondition(item.condition)}
-                  </span>
-                  {item.status === 'SOLD' && (
-                    <span className="absolute top-3 right-3 bg-rose-600 text-white text-[11px] font-black tracking-wider px-2.5 py-1 rounded-md shadow-sm uppercase border border-rose-500 z-10 flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
-                      SOLD
+            {listings.map((item) => {
+              // Safely parse or default photos array
+              const photosArray = Array.isArray(item.photos) ? item.photos : [];
+
+              return (
+                <Link
+                  key={item.id}
+                  href={`/listings/${item.id}`}
+                  className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition flex flex-col group"
+                >
+                  <div className="relative h-48 w-full bg-slate-100 overflow-hidden">
+                    <div className="grid grid-cols-2 gap-1 h-full">
+                      {photosArray.slice(0, 4).map((photo: string, index: number) => (
+                        <img key={`${item.id}-${index}`} src={photo} alt={item.title} className="w-full h-24 object-cover" />
+                      ))}
+                    </div>
+                    <span className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-slate-800 text-xs font-semibold px-2.5 py-1 rounded-md shadow-xs">
+                      {formatCondition(item.condition)}
                     </span>
-                  )}
-                </div>
-                <div className="p-4 flex flex-col flex-1 justify-between">
-                  <div>
-                    <h3 className="font-semibold text-slate-900 text-sm mb-1 line-clamp-1">{item.title}</h3>
-                    <p className="text-lg font-bold text-slate-900">{formatPrice(item.price)}</p>
+                    {item.status === 'SOLD' && (
+                      <span className="absolute top-3 right-3 bg-rose-600 text-white text-[11px] font-black tracking-wider px-2.5 py-1 rounded-md shadow-sm uppercase border border-rose-500 z-10 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
+                        SOLD
+                      </span>
+                    )}
                   </div>
-                  <div className="flex items-center justify-between mt-3">
-                    <p className="text-xs text-slate-500 flex items-center gap-1">
-                      📍 {item.neighborhood}, {item.city}
-                    </p>
-                    <span className="text-[11px] font-semibold text-slate-600 border border-slate-200 px-2 py-1 rounded-full">
-                      {item.photos.length} photos
-                    </span>
+                  <div className="p-4 flex flex-col flex-1 justify-between">
+                    <div>
+                      <h3 className="font-semibold text-slate-900 text-sm mb-1 line-clamp-1">{item.title}</h3>
+                      <p className="text-lg font-bold text-slate-900">{formatPrice(item.price)}</p>
+                    </div>
+                    <div className="flex items-center justify-between mt-3">
+                      <p className="text-xs text-slate-500 flex items-center gap-1">
+                        📍 {item.neighborhood}, {item.city}
+                      </p>
+                      <span className="text-[11px] font-semibold text-slate-600 border border-slate-200 px-2 py-1 rounded-full">
+                        {photosArray.length} photos
+                      </span>
+                    </div>
                   </div>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
           </div>
         )}
       </main>
