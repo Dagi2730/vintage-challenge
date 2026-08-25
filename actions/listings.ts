@@ -5,7 +5,12 @@ import { prisma } from '@/lib/prisma';
 import { hasDbConfiguration } from '@/lib/account-store';
 import { z } from 'zod';
 import { Condition, ListingStatus, Prisma } from '@prisma/client';
-import { mockCategories, mockListings } from '@/src/data/mockData';
+import { mockCategories } from '@/src/data/mockData';
+import {
+  saveMemoryListing,
+  getAllMemoryListings,
+} from '@/lib/listing-store';
+import { revalidatePath } from 'next/cache';
 
 const createListingSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters long."),
@@ -38,13 +43,6 @@ const listingInclude = {
   category: { select: { name: true, slug: true } },
   seller: { select: { id: true, name: true, rating: true, verifiedStatus: true } },
 } as const;
-
-import {
-  getMemoryListingStatus,
-  saveMemoryListing,
-  getAllMemoryListings,
-} from '@/lib/listing-store';
-import { revalidatePath } from 'next/cache';
 
 export async function createListing(input: CreateListingInput) {
   const session = await auth();
@@ -99,6 +97,7 @@ export async function createListing(input: CreateListingInput) {
         sellerId: session.user.id,
         status: ListingStatus.ACTIVE,
       },
+      include: listingInclude,
     });
 
     revalidatePath('/');
@@ -159,7 +158,7 @@ export async function getUserListings(userId: string) {
   }
 }
 
-export async function searchListings(params: SearchListingsParams) {
+export async function searchListings(params: SearchListingsParams = {}) {
   const {
     keyword,
     categoryId,
@@ -316,7 +315,11 @@ export async function searchListings(params: SearchListingsParams) {
     };
   } catch (error) {
     console.error("Error executing search:", error);
-    throw new Error("Failed to search listings.");
+    return {
+      success: true,
+      data: [],
+      metadata: { total: 0, page, limit, totalPages: 0 },
+    };
   }
 }
 
