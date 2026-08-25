@@ -8,23 +8,25 @@ generator client {
 }
 
 model User {
-  id             String        @id @default(cuid())
-  name           String
-  email          String        @unique
-  passwordHash   String
-  role           Role          @default(USER)
-  phoneNumber    String?
-  telegramHandle String?
-  nationalIdUrl  String?
-  verifiedStatus Boolean       @default(false)
-  rating         Float         @default(0.0)
-  listings       Listing[]
-  reviewsWritten Review[]      @relation("ReviewerReviews")
-  reviewsReceived Review[]      @relation("SellerReviews")
-  buyerTx        Transaction[] @relation("BuyerTransactions")
-  sellerTx       Transaction[] @relation("SellerTransactions")
-  reports        Report[]
-  createdAt      DateTime      @default(now())
+  id                String        @id @default(cuid())
+  name              String
+  email             String        @unique
+  passwordHash      String
+  role              Role          @default(USER)
+  phoneNumber       String?
+  telegramHandle    String?
+  fanNumber         String?
+  nationalIdUrl     String?
+  verificationState String?       @default("UNVERIFIED")
+  verifiedStatus    Boolean       @default(false)
+  rating            Float         @default(0.0)
+  listings          Listing[]
+  reviewsWritten    Review[]      @relation("ReviewerReviews")
+  reviewsReceived   Review[]      @relation("SellerReviews")
+  buyerTx           Transaction[] @relation("BuyerTransactions")
+  sellerTx          Transaction[] @relation("SellerTransactions")
+  reports           Report[]
+  createdAt         DateTime      @default(now())
 }
 
 model Report {

@@ -4,6 +4,7 @@ import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { hasDbConfiguration, findMemoryUserById, updateMemoryUser } from '@/lib/account-store';
 import { revalidatePath } from 'next/cache';
+import { ensureUserExists } from '@/actions/user';
 
 // In-memory sandbox store for Fayda OTPs
 const otpStore = new Map<string, { code: string; expiresAt: number; fanNumber: string; verifiedOtp: boolean }>();
@@ -94,24 +95,28 @@ export async function submitFaydaVerificationRequest(idPhotoUrl: string) {
     nationalIdUrl: photoUrl,
   });
 
-  if (!hasDbConfiguration()) {
-    updateMemoryUser(userId, {
-      fanNumber,
-      nationalIdUrl: photoUrl,
-      verificationState: 'IN_PROGRESS',
-      verifiedStatus: false,
-    });
-  } else {
+  // Always update memory account store
+  updateMemoryUser(userId, {
+    fanNumber,
+    nationalIdUrl: photoUrl,
+    verificationState: 'IN_PROGRESS',
+    verifiedStatus: false,
+  });
+
+  if (hasDbConfiguration()) {
     try {
+      await ensureUserExists(session.user);
       await prisma.user.update({
         where: { id: userId },
         data: {
+          fanNumber,
           nationalIdUrl: photoUrl,
+          verificationState: 'IN_PROGRESS',
           verifiedStatus: false,
         },
       });
     } catch (error) {
-      console.error('Failed to save ID verification request:', error);
+      console.error('Failed to save ID verification request in DB:', error);
     }
   }
 
@@ -136,19 +141,22 @@ export async function adminApproveVerification(userId: string) {
 
   updateVerificationRecordState(userId, 'VERIFIED');
 
-  if (!hasDbConfiguration()) {
-    updateMemoryUser(userId, {
-      verificationState: 'VERIFIED',
-      verifiedStatus: true,
-    });
-  } else {
+  updateMemoryUser(userId, {
+    verificationState: 'VERIFIED',
+    verifiedStatus: true,
+  });
+
+  if (hasDbConfiguration()) {
     try {
       await prisma.user.update({
         where: { id: userId },
-        data: { verifiedStatus: true },
+        data: {
+          verificationState: 'VERIFIED',
+          verifiedStatus: true,
+        },
       });
     } catch (error) {
-      console.error('Failed to approve verification:', error);
+      console.error('Failed to approve verification in DB:', error);
     }
   }
 
@@ -167,19 +175,22 @@ export async function adminDeclineVerification(userId: string) {
 
   updateVerificationRecordState(userId, 'DECLINED');
 
-  if (!hasDbConfiguration()) {
-    updateMemoryUser(userId, {
-      verificationState: 'DECLINED',
-      verifiedStatus: false,
-    });
-  } else {
+  updateMemoryUser(userId, {
+    verificationState: 'DECLINED',
+    verifiedStatus: false,
+  });
+
+  if (hasDbConfiguration()) {
     try {
       await prisma.user.update({
         where: { id: userId },
-        data: { verifiedStatus: false },
+        data: {
+          verificationState: 'DECLINED',
+          verifiedStatus: false,
+        },
       });
     } catch (error) {
-      console.error('Failed to decline verification:', error);
+      console.error('Failed to decline verification in DB:', error);
     }
   }
 

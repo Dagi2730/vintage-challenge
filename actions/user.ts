@@ -8,6 +8,28 @@ import { revalidatePath } from 'next/cache';
 
 import { getVerificationRecord } from '@/lib/verification-store';
 
+export async function ensureUserExists(sessionUser: { id: string; name?: string | null; email?: string | null }) {
+  if (!hasDbConfiguration() || !sessionUser?.id) return;
+
+  try {
+    const existing = await prisma.user.findUnique({ where: { id: sessionUser.id } });
+    if (!existing) {
+      await prisma.user.create({
+        data: {
+          id: sessionUser.id,
+          name: sessionUser.name || 'User Account',
+          email: sessionUser.email || `${sessionUser.id}@emerkato.com`,
+          passwordHash: 'in-memory-session-user',
+          role: 'USER',
+          verifiedStatus: false,
+        },
+      });
+    }
+  } catch (error) {
+    console.error('Error ensuring user exists in DB:', error);
+  }
+}
+
 export async function getUserProfile(userId: string) {
   const vRecord = getVerificationRecord(userId);
 
@@ -18,8 +40,8 @@ export async function getUserProfile(userId: string) {
       id: userId,
       name: memoryUser?.name ?? 'User',
       email: memoryUser?.email ?? 'user@example.com',
-      phoneNumber: memoryUser?.phoneNumber ?? '+251 91 123 4567',
-      telegramHandle: memoryUser?.telegramHandle ?? '@user',
+      phoneNumber: memoryUser?.phoneNumber ?? '',
+      telegramHandle: memoryUser?.telegramHandle ?? '',
       fanNumber: vRecord?.fanNumber ?? memoryUser?.fanNumber ?? null,
       nationalIdUrl: vRecord?.nationalIdUrl ?? memoryUser?.nationalIdUrl ?? null,
       verificationState: vState,
@@ -36,23 +58,55 @@ export async function getUserProfile(userId: string) {
         email: true,
         phoneNumber: true,
         telegramHandle: true,
+        fanNumber: true,
+        verificationState: true,
         verifiedStatus: true,
         nationalIdUrl: true,
       },
     });
 
-    if (!user) return null;
+    if (!user) {
+      const memoryUser = findMemoryUserById(userId);
+      const vState = vRecord?.verificationState ?? memoryUser?.verificationState ?? 'UNVERIFIED';
+      return {
+        id: userId,
+        name: memoryUser?.name ?? 'User',
+        email: memoryUser?.email ?? 'user@example.com',
+        phoneNumber: memoryUser?.phoneNumber ?? '',
+        telegramHandle: memoryUser?.telegramHandle ?? '',
+        fanNumber: vRecord?.fanNumber ?? memoryUser?.fanNumber ?? null,
+        nationalIdUrl: vRecord?.nationalIdUrl ?? memoryUser?.nationalIdUrl ?? null,
+        verificationState: vState,
+        verifiedStatus: vState === 'VERIFIED',
+      };
+    }
+
+    const vState = (vRecord?.verificationState ?? user.verificationState ?? (user.verifiedStatus ? 'VERIFIED' : 'UNVERIFIED')) as any;
 
     return {
       ...user,
-      phoneNumber: user.phoneNumber ?? '+251 91 123 4567',
-      telegramHandle: user.telegramHandle ?? ('@' + (user.name.toLowerCase().replace(/\s+/g, ''))),
-      fanNumber: null,
-      verificationState: user.verifiedStatus ? 'VERIFIED' as const : 'UNVERIFIED' as const,
+      phoneNumber: user.phoneNumber ?? '',
+      telegramHandle: user.telegramHandle ?? '',
+      fanNumber: vRecord?.fanNumber ?? user.fanNumber ?? null,
+      nationalIdUrl: vRecord?.nationalIdUrl ?? user.nationalIdUrl ?? null,
+      verificationState: vState,
+      verifiedStatus: vState === 'VERIFIED',
     };
   } catch (error) {
     console.error('Error fetching user profile:', error);
-    return null;
+    const memoryUser = findMemoryUserById(userId);
+    const vState = vRecord?.verificationState ?? memoryUser?.verificationState ?? 'UNVERIFIED';
+    return {
+      id: userId,
+      name: memoryUser?.name ?? 'User Account',
+      email: memoryUser?.email ?? 'user@example.com',
+      phoneNumber: memoryUser?.phoneNumber ?? '',
+      telegramHandle: memoryUser?.telegramHandle ?? '',
+      fanNumber: vRecord?.fanNumber ?? null,
+      nationalIdUrl: vRecord?.nationalIdUrl ?? null,
+      verificationState: vState,
+      verifiedStatus: vState === 'VERIFIED',
+    };
   }
 }
 
@@ -68,31 +122,32 @@ export async function updateUserProfile(input: {
 
   const userId = session.user.id;
 
-  if (!hasDbConfiguration()) {
-    updateMemoryUser(userId, {
-      name: input.name,
-      phoneNumber: input.phoneNumber,
-      telegramHandle: input.telegramHandle,
-    });
+  // Always update memory user store
+  updateMemoryUser(userId, {
+    name: input.name,
+    phoneNumber: input.phoneNumber,
+    telegramHandle: input.telegramHandle,
+  });
 
-    revalidatePath('/account');
-    return { success: true };
+  if (hasDbConfiguration()) {
+    try {
+      await ensureUserExists(session.user);
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          name: input.name,
+          phoneNumber: input.phoneNumber,
+          telegramHandle: input.telegramHandle,
+        },
+      });
+    } catch (error) {
+      console.error('Error updating user profile in DB:', error);
+    }
   }
 
-  try {
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        name: input.name,
-      },
-    });
-
-    revalidatePath('/account');
-    return { success: true };
-  } catch (error) {
-    console.error('Error updating user profile:', error);
-    throw new Error('Failed to update profile.');
-  }
+  revalidatePath('/account');
+  revalidatePath('/admin');
+  return { success: true };
 }
 
 export async function updateAdminAccount(input: {

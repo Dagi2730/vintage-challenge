@@ -11,6 +11,7 @@ import {
   getAllMemoryListings,
 } from '@/lib/listing-store';
 import { revalidatePath } from 'next/cache';
+import { ensureUserExists } from '@/actions/user';
 
 const createListingSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters long."),
@@ -91,6 +92,7 @@ export async function createListing(input: CreateListingInput) {
   }
 
   try {
+    await ensureUserExists(session.user);
     const listing = await prisma.listing.create({
       data: {
         ...validated.data,
@@ -100,14 +102,47 @@ export async function createListing(input: CreateListingInput) {
       include: listingInclude,
     });
 
+    saveMemoryListing({
+      ...listing,
+      category: listing.category ?? { name: 'General', slug: 'general' },
+      seller: listing.seller ?? { name: session.user.name || 'Seller', rating: 5.0, verifiedStatus: true },
+    });
+
     revalidatePath('/');
     revalidatePath('/dashboard');
     revalidatePath('/explore');
 
     return { success: true, data: listing };
   } catch (error) {
-    console.error("Error creating listing:", error);
-    throw new Error("Internal Server Error: Failed to create listing.");
+    console.error("Error creating listing in DB, using fallback memory store:", error);
+    const categoryName = mockCategories.find((c) => c.id === validated.data.categoryId)?.name ?? 'General';
+    const fallbackListing = {
+      id: `listing_${Date.now()}`,
+      sellerId: session.user.id,
+      categoryId: validated.data.categoryId,
+      title: validated.data.title,
+      description: validated.data.description,
+      price: validated.data.price,
+      condition: validated.data.condition,
+      city: validated.data.city,
+      neighborhood: validated.data.neighborhood,
+      status: ListingStatus.ACTIVE,
+      photos: validated.data.photos,
+      createdAt: new Date(),
+      category: { name: categoryName, slug: categoryName.toLowerCase() },
+      seller: {
+        id: session.user.id,
+        name: session.user.name ?? 'Seller',
+        rating: 5.0,
+        verifiedStatus: Boolean(session.user.verifiedStatus),
+      },
+    };
+
+    saveMemoryListing(fallbackListing);
+    revalidatePath('/');
+    revalidatePath('/dashboard');
+    revalidatePath('/explore');
+    return { success: true, data: fallbackListing };
   }
 }
 
