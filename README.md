@@ -6,61 +6,125 @@
 
 ## 📌 Executive Summary & Core Value Proposition
 
-**E-merkato** is a modern, hyper-local P2P secondhand marketplace tailored for Addis Ababa and Ethiopia. It empowers citizens to buy and sell pre-owned goods with high trust, transaction security, and national identity verification built natively into the platform.
-
-### Key Capabilities:
-- **Ethiopian National ID (Fayda) Verification**: 4-step national identity verification model using Fayda Identification Numbers (FAN), SMS OTP verification, and physical/digital National ID document photograph uploads.
-- **Admin Review Queue & Verification Portal**: Role-restricted admin interface (`/admin`) for inspecting submitted national ID card photos, verifying FAN numbers, and issuing platform verified badges (`🛡️ Verified`).
-- **Hyper-Local P2P Marketplace**: Categorized listings (*Electronics*, *Furniture*, *Vehicles*, *Apparel*), neighborhood filtering (*Bole*, *Kazanchis*, *Piassa*, *CMC*, etc.), hero search, and item condition badges.
-- **Community Moderation & Reporting**: Users can report suspicious listings, which are queued in the Admin portal for administrators to review, resolve, or dismiss.
-- **Real-Time Item Status Management**: Instant `• SOLD` tag overlays on item cards upon purchase completion.
-- **Role-Based Access Control (RBAC)**: Strict permission boundaries ensuring only authorized platform administrators can access `/admin`.
-- **User Account & Profile Management**: Complete account management section (`/account`) with dynamic profile editing (Name, Phone Number, Telegram Handle) and verification status tracking.
+**E-merkato** is a state-of-the-art, hyper-local peer-to-peer (P2P) secondhand marketplace specifically engineered for Addis Ababa and Ethiopia. It empowers citizens to buy and sell pre-owned items (electronics, furniture, vehicles, apparel) with high trust, transaction security, and native national identity verification powered by the Ethiopian Fayda ID system.
 
 ---
 
-## 🚀 Live Demo & Admin Credentials
+## 🚀 Live Demo & Access Credentials
 
-| Environment | URL / Access Details |
+| Environment | URL / Details |
 | :--- | :--- |
-| **Live Web App** | [https://vintage-challenge.vercel.app/](https://vintage-challenge.vercel.app/) |
-| **Admin Portal** | [https://vintage-challenge.vercel.app/admin](https://vintage-challenge.vercel.app/admin) *(Restricted to Admin Role)* |
+| **Live Web Application** | [https://vintage-challenge.vercel.app/](https://vintage-challenge.vercel.app/) |
+| **Admin Management Portal** | [https://vintage-challenge.vercel.app/admin](https://vintage-challenge.vercel.app/admin) *(Restricted to Admin Role)* |
 | **Admin Email** | `admin@emerkato.com` |
-| **Admin Password** | `admin123password` |
+| **Admin Password** | `admin123password` *(or `admin123`)* |
 
 ---
 
-## 🛡️ National ID (Fayda) Verification Workflow
+## ✨ Complete Feature & Functionality Breakdown
 
-E-merkato incorporates a robust 2-phase National Identity verification system:
+### 1. 🛡️ Ethiopian National ID (Fayda) Verification Workflow
+- **4-Step Verification Wizard**: Interactive modal guiding users through FAN input, SMS OTP validation, ID photo upload, and status tracking.
+- **Fayda Identification Number (FAN) Validation**: Validates 12–16 digit national ID numbers.
+- **SMS OTP Simulation**: Dispatches a sandbox SMS verification code (`849201`) with rate-limiting protection.
+- **National ID Document Upload**: Supports client-side image upload of physical or digital National ID cards with live preview.
+- **Admin Review Queue**: Transmits requests to `/admin` where administrators inspect submitted FAN numbers and ID card photos.
+- **1-Click Approve & Decline**: Admins can issue platform-wide verified status (`🛡️ Verified`) or reject requests (`❌ Declined`).
+- **Verified Seller Badges**: Verified users earn a green `🛡️ Verified` badge displayed across their profile, item detail pages, and listing cards.
 
-```
-[1. User enters FAN Number] ➔ [2. SMS OTP Verification (849201)] ➔ [3. Upload National ID Card Photo] ➔ [4. Submission Queued in Admin Portal] ➔ [5. Admin Approves/Declines] ➔ [6. Verified Badge Issued 🛡️]
-```
+### 2. 📸 Image Upload & Real Photo Preservation
+- **HTML5 Canvas Compression**: Automatically resizes uploaded images on the client side (800px max dimension, 82% JPEG quality) before submission.
+- **Real Photo Storage**: Guarantees that user-uploaded photos are preserved and stored directly without replacing user media with demo assets.
+- **Expanded Server Action Payload Limit**: Configured `10MB` body size limit in `next.config.js` to allow multi-photo uploads without request entity size errors.
+- **Multi-Photo Support**: Enforces 3 to 5 photos per listing with interactive thumbnail galleries on detail pages.
 
-1. **FAN Entry**: The user enters their official 12–16 digit Fayda Identification Number (FAN).
-2. **SMS OTP Validation**: System dispatches an SMS verification code (Sandbox OTP: `849201`).
-3. **Physical ID Photo Upload**: User uploads a photograph of their physical or digital National ID card using a native file input with live preview.
-4. **Admin Queue & Audit**: The request is transmitted immediately to the Admin Portal queue (`/admin`). Status transitions to `⏳ Pending Admin Review`.
-5. **1-Click Admin Decision**: Administrators evaluate the FAN number and uploaded ID document on `/admin`, clicking **`Approve ✓`** to grant the `🛡️ Verified` badge or **`Decline ✕`** to reject the request.
+### 3. ⚙️ Admin Management & Moderation Portal (`/admin`)
+- **Role-Based Access Control**: Strict middleware and session checks protecting `/admin` so only users with `ADMIN` role can access it.
+- **National ID Verification Queue**: View submitted FAN numbers, view full-resolution National ID card photographs, approve or decline verification requests, or click **`🗑️ Clear Queue`** to reset queue data.
+- **Marketplace Listings Moderation**: Complete overview of all active marketplace listings with seller info, price, location, thumbnail, and 1-click **`🗑️ Delete Listing`** capability to purge inappropriate posts from PostgreSQL and memory stores.
+
+### 4. 🛒 Seller Contact & Direct Buyer Outreach
+- **Dynamic Contact Synchronization**: Automatically fetches and populates the seller's verified Phone Number and Telegram handle (`@handle`).
+- **Direct Telegram Integration**: One-click **`Chat on Telegram (@username)`** button opening `https://t.me/username` in a new tab.
+- **Direct Phone Dialer**: One-click **`Call Seller (+251...)`** button launching the phone dialer.
+- **Report Listing Modal**: Users can report suspicious or inappropriate items with category reasons (*Misleading Info*, *Prohibited Item*, *Scam*, *Inappropriate Content*).
+
+### 5. 🔍 Hyper-Local Search & Filtering
+- **Addis Ababa Neighborhood Mapping**: Supports city and neighborhood selection (*Bole*, *Kazanchis*, *Piassa*, *CMC*, *Akaki Kality*, *Bahir Dar - Belay Zeleke*, etc.).
+- **Category Tabs**: Filter listings by *Electronics*, *Furniture*, *Vehicles*, and *Apparel*.
+- **Price Range & Sorting**: Filter by min/max ETB price and sort by *Newest*, *Price: Low to High*, or *Price: High to Low*.
+- **Hero Search Bar**: Instant keyword search matching item title and description.
+
+### 6. 👤 Account & Profile Management (`/account`)
+- **Profile Customization**: Edit display Name, Phone Number, and Telegram Handle with immediate persistence.
+- **My Listings Dashboard**: View all user-created listings with direct deletion buttons.
+- **Fayda Verification Status Hub**: Real-time status indicator (`UNVERIFIED`, `IN_PROGRESS`, `VERIFIED`, `DECLINED`) with quick launch for the verification wizard.
+
+### 7. 🤖 AI Assistant & Interactive Modals
+- **Floating AI Assistant & FAQ Widget**: 24/7 floating support drawer with instant FAQ answers regarding buying, selling, Fayda ID security, and platform rules.
+- **Footer Information Modals**: Interactive popups for *Trust & Safety*, *Support & FAQ*, *About Us*, and *Privacy Policy*.
+
+### 8. 🧮 Float Precision & Robust Server Action Error Protection
+- **Float Precision Fix**: Handles 32-bit floating point precision loss (e.g. converting `499,984` back to clean `ETB 500,000`).
+- **Graceful Error Handling**: Server Actions return structured `{ success: false, error: message }` objects instead of throwing uncaught exceptions, preventing Next.js production Server Component render crashes.
 
 ---
 
-## 💻 Tech Stack
+## 💻 Tech Stack & Architecture
 
-- **Framework**: Next.js 14 / 15 (App Router, Server Components, Server Actions)
+- **Framework**: Next.js 14 / 15 (App Router, React Server Components, Server Actions)
 - **Language**: TypeScript
 - **Styling**: Vanilla CSS + Tailwind CSS (Custom Color System, Glassmorphism, Micro-animations)
 - **Authentication**: AuthJS v5 (NextAuth) with JWT Sessions & Middleware
-- **Database & ORM**: PostgreSQL (Neon Database Serverless Cloud Engine) + Prisma ORM
-- **State Store**: `globalThis` persistent memory stores for HMR resilience + graceful in-memory fallback for database cold-starts.
-- **Security**: `bcrypt` for cryptographic password hashing and atomic Prisma updates to prevent purchase race conditions.
+- **Database & ORM**: PostgreSQL (Neon Database Serverless Engine) + Prisma ORM
 - **Validation**: Zod schema validation
 - **Deployment**: Vercel Serverless Platform
 
 ---
 
-## 📂 Directory & Codebase Architecture
+## 🗄️ Database Schema (Prisma)
+
+```prisma
+model User {
+  id                String             @id @default(cuid())
+  name              String
+  email             String             @unique
+  passwordHash      String
+  role              Role               @default(USER)
+  phoneNumber       String?
+  telegramHandle    String?
+  fanNumber         String?
+  nationalIdUrl     String?
+  verificationState VerificationState? @default(UNVERIFIED)
+  verifiedStatus    Boolean            @default(false)
+  rating            Float              @default(0.0)
+  listings          Listing[]
+  reports           Report[]
+  createdAt         DateTime           @default(now())
+}
+
+model Listing {
+  id           String        @id @default(cuid())
+  sellerId     String
+  seller       User          @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  categoryId   String
+  category     Category      @relation(fields: [categoryId], references: [id])
+  title        String
+  description  String
+  price        Float
+  condition    Condition
+  city         String
+  neighborhood String
+  status       ListingStatus @default(ACTIVE)
+  photos       String[]
+  reports      Report[]
+  createdAt    DateTime      @default(now())
+}
+```
+
+---
+
+## 📂 Project Directory Structure
 
 ```
 vintage-challenge/
@@ -68,33 +132,34 @@ vintage-challenge/
 ├── auth.ts                   # AuthJS configuration, Credentials provider & Admin role mapping
 ├── auth.config.ts            # Route protection middleware & session token callbacks
 ├── lib/                      # Core backend utilities & memory stores
-│   ├── account-store.ts      # User profile store & persistence
+│   ├── account-store.ts      # User profile store & memory fallback
 │   ├── listing-store.ts      # Active marketplace listing store
-│   ├── verification-store.ts # National ID verification request persistence store
-│   ├── prisma.ts             # Prisma ORM database client connection
-│   └── location-data.ts      # Addis Ababa neighborhoods & regions mapping
+│   ├── verification-store.ts # Fayda verification request persistence store
+│   ├── prisma.ts             # Prisma ORM database client instance
+│   ├── location-data.ts      # Addis Ababa neighborhoods & regions mapping
+│   └── format.ts             # Currency formatting & float precision correction
 ├── prisma/                   # Database schema & seed scripts
-│   ├── schema.prisma         # Prisma data schema (User, Listing, Category, Transaction, Review)
-│   └── seed.ts               # Production seed script (Admin setup & category initialization)
+│   ├── schema.prisma         # Prisma data schema
+│   └── seed.ts               # Production seed script
 ├── src/
 │   ├── app/                  # Next.js App Router pages
 │   │   ├── page.tsx          # Homepage with Hero Search & Marketplace Feed
 │   │   ├── dashboard/        # User Marketplace Dashboard
 │   │   ├── explore/          # Category & Location Filtered Explorer
 │   │   ├── account/          # User Account Settings & Fayda Verification Hub
-│   │   ├── admin/            # Admin Verification Portal (Role Protected)
-│   │   ├── sell/             # Item Listing Posting Form with photo upload
-│   │   └── listings/[id]/    # Detailed Listing Page with Sold state & Buy flow
-│   ├── components/           # UI Components (Header, FaydaVerificationModal, EditProfileModal, etc.)
+│   │   ├── admin/            # Admin Management Portal (Role Protected)
+│   │   ├── sell/             # Item Posting Form with Canvas compression
+│   │   └── listings/[id]/    # Listing Detail Page with Sold state & Contact flow
+│   ├── components/           # UI Components (Header, FaydaVerificationModal, DeleteListingButton, AiAssistantWidget, InfoModals)
 │   ├── data/                 # System constants & category definitions
 │   └── types/                # TypeScript interfaces & domain models
-├── README.md                 # Project documentation
+├── README.md                 # Comprehensive project documentation
 └── package.json              # Project dependencies & scripts
 ```
 
 ---
 
-## 🛠️ Getting Started & Local Development
+## 🛠️ Local Development Setup
 
 ### 1. Clone & Install Dependencies
 
@@ -109,24 +174,22 @@ npm install
 Create a `.env.local` file in the project root:
 
 ```env
-DATABASE_URL="postgresql://user:password@ep-cool-seed-123456.us-east-2.aws.neon.tech/neondb?sslmode=require"
+DATABASE_URL="postgresql://neondb_owner:password@ep-cool-seed.us-east-2.aws.neon.tech/neondb?sslmode=require"
 AUTH_SECRET="super-secret-auth-key-32-chars-long"
 NEXTAUTH_URL="http://localhost:3000"
 ```
 
-### 3. Database Initialization
+### 3. Database Push & Seed
 
 ```bash
-# Push schema to database
+# Push Prisma schema to database
 npm run db:push
 
-# Run seed script to set up Admin user & Categories
+# Seed admin user and categories
 npm run db:seed
 ```
 
-> **Note**: If you don't configure a PostgreSQL database, the application will automatically fall back to an ephemeral **in-memory data store**. This ensures the demo and all workflows (including Admin dashboards and Fayda verification) remain fully testable for judges even without setting up `.env.local`!
-
-### 4. Run Development Server
+### 4. Start Development Server
 
 ```bash
 npm run dev
@@ -136,14 +199,14 @@ Visit [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
 
-## 🔑 npm Scripts
+## 🔑 Available npm Scripts
 
 | Script | Description |
 | :--- | :--- |
 | `npm run dev` | Start local development server on `http://localhost:3000` |
 | `npm run build` | Build Next.js production bundle |
 | `npm run start` | Start production server |
-| `npm run db:push` | Synchronize Prisma schema with database |
+| `npm run db:push` | Push Prisma schema directly to PostgreSQL database |
 | `npm run db:seed` | Seed database with admin user and clean categories |
 | `npm run lint` | Run ESLint static code analysis |
 
