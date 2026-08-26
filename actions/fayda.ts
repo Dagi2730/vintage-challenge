@@ -117,11 +117,11 @@ export async function submitFaydaVerificationRequest(idPhotoUrl: string) {
     verifiedStatus: false,
   });
 
-  if (!hasDbConfiguration()) {
+  if (hasDbConfiguration()) {
     try {
       await ensureUserExists(session.user);
-      await prisma.user.update({
-        where: { id: userId },
+      await prisma.user.updateMany({
+        where: { OR: [{ id: userId }, { email: userEmail }] },
         data: {
           fanNumber,
           nationalIdUrl: photoUrl,
@@ -131,7 +131,6 @@ export async function submitFaydaVerificationRequest(idPhotoUrl: string) {
       });
     } catch (error) {
       console.error('Failed to save ID verification request in DB:', error);
-      throw new Error('Failed to save verification request.');
     }
   }
 
@@ -161,10 +160,10 @@ export async function adminApproveVerification(userId: string) {
     verifiedStatus: true,
   });
 
-  if (!hasDbConfiguration()) {
+  if (hasDbConfiguration()) {
     try {
-      await prisma.user.update({
-        where: { id: userId },
+      await prisma.user.updateMany({
+        where: { OR: [{ id: userId }, { email: userId }] },
         data: {
           verificationState: 'VERIFIED',
           verifiedStatus: true,
@@ -172,7 +171,6 @@ export async function adminApproveVerification(userId: string) {
       });
     } catch (error) {
       console.error('Failed to approve verification in DB:', error);
-      throw new Error('Failed to approve verification.');
     }
   }
 
@@ -196,10 +194,10 @@ export async function adminDeclineVerification(userId: string) {
     verifiedStatus: false,
   });
 
-  if (!hasDbConfiguration()) {
+  if (hasDbConfiguration()) {
     try {
-      await prisma.user.update({
-        where: { id: userId },
+      await prisma.user.updateMany({
+        where: { OR: [{ id: userId }, { email: userId }] },
         data: {
           verificationState: 'DECLINED',
           verifiedStatus: false,
@@ -207,7 +205,6 @@ export async function adminDeclineVerification(userId: string) {
       });
     } catch (error) {
       console.error('Failed to decline verification in DB:', error);
-      throw new Error('Failed to decline verification.');
     }
   }
 
