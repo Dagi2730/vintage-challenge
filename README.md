@@ -12,6 +12,7 @@
 - **Ethiopian National ID (Fayda) Verification**: 4-step national identity verification model using Fayda Identification Numbers (FAN), SMS OTP verification, and physical/digital National ID document photograph uploads.
 - **Admin Review Queue & Verification Portal**: Role-restricted admin interface (`/admin`) for inspecting submitted national ID card photos, verifying FAN numbers, and issuing platform verified badges (`🛡️ Verified`).
 - **Hyper-Local P2P Marketplace**: Categorized listings (*Electronics*, *Furniture*, *Vehicles*, *Apparel*), neighborhood filtering (*Bole*, *Kazanchis*, *Piassa*, *CMC*, etc.), hero search, and item condition badges.
+- **Community Moderation & Reporting**: Users can report suspicious listings, which are queued in the Admin portal for administrators to review, resolve, or dismiss.
 - **Real-Time Item Status Management**: Instant `• SOLD` tag overlays on item cards upon purchase completion.
 - **Role-Based Access Control (RBAC)**: Strict permission boundaries ensuring only authorized platform administrators can access `/admin`.
 - **User Account & Profile Management**: Complete account management section (`/account`) with dynamic profile editing (Name, Phone Number, Telegram Handle) and verification status tracking.
@@ -52,7 +53,8 @@ E-merkato incorporates a robust 2-phase National Identity verification system:
 - **Styling**: Vanilla CSS + Tailwind CSS (Custom Color System, Glassmorphism, Micro-animations)
 - **Authentication**: AuthJS v5 (NextAuth) with JWT Sessions & Middleware
 - **Database & ORM**: PostgreSQL (Neon Database Serverless Cloud Engine) + Prisma ORM
-- **State Store**: `globalThis` persistent memory stores for HMR resilience + Server Actions
+- **State Store**: `globalThis` persistent memory stores for HMR resilience + graceful in-memory fallback for database cold-starts.
+- **Security**: `bcrypt` for cryptographic password hashing and atomic Prisma updates to prevent purchase race conditions.
 - **Validation**: Zod schema validation
 - **Deployment**: Vercel Serverless Platform
 
@@ -121,6 +123,8 @@ npm run db:push
 # Run seed script to set up Admin user & Categories
 npm run db:seed
 ```
+
+> **Note**: If you don't configure a PostgreSQL database, the application will automatically fall back to an ephemeral **in-memory data store**. This ensures the demo and all workflows (including Admin dashboards and Fayda verification) remain fully testable for judges even without setting up `.env.local`!
 
 ### 4. Run Development Server
 
