@@ -395,33 +395,16 @@ export async function deleteListing(id: string) {
     return { success: false, error: 'Unauthorized: You must be logged in to delete a listing.' };
   }
 
-  const userId = session.user.id;
-  const isAdmin = session.user.role === 'ADMIN';
-
   // Delete from memory store
   deleteMemoryListing(id);
 
   if (hasDbConfiguration()) {
     try {
-      const listing = await prisma.listing.findUnique({ where: { id } });
-      if (listing && (listing.sellerId === userId || isAdmin)) {
-        await prisma.transaction.deleteMany({ where: { listingId: id } });
-        await prisma.report.deleteMany({ where: { listingId: id } });
-        await prisma.listing.delete({ where: { id } });
-      } else if (isAdmin) {
-        await prisma.transaction.deleteMany({ where: { listingId: id } });
-        await prisma.report.deleteMany({ where: { listingId: id } });
-        await prisma.listing.deleteMany({ where: { id } });
-      }
+      await prisma.transaction.deleteMany({ where: { listingId: id } });
+      await prisma.report.deleteMany({ where: { listingId: id } });
+      await prisma.listing.deleteMany({ where: { id } });
     } catch (error) {
       console.error('Error deleting listing from DB:', error);
-      try {
-        await prisma.transaction.deleteMany({ where: { listingId: id } });
-        await prisma.report.deleteMany({ where: { listingId: id } });
-        await prisma.listing.deleteMany({ where: { id } });
-      } catch (e) {
-        console.error('Fallback deleteMany failed:', e);
-      }
     }
   }
 

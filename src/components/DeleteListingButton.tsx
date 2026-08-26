@@ -28,7 +28,10 @@ export function DeleteListingButton({
           router.push('/dashboard');
         } else {
           router.refresh();
+          window.location.reload();
         }
+      } else {
+        alert(res?.error || 'Failed to delete listing.');
       }
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to delete listing.');
