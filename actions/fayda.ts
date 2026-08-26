@@ -9,6 +9,9 @@ import { ensureUserExists } from '@/actions/user';
 // In-memory sandbox store for Fayda OTPs
 const otpStore = new Map<string, { code: string; expiresAt: number; fanNumber: string; verifiedOtp: boolean }>();
 
+// Simple in-memory rate limiter for OTP requests
+const otpRateLimit = new Map<string, { count: number; expiresAt: number }>();
+
 export async function requestFaydaOtp(fanNumber: string) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -18,6 +21,17 @@ export async function requestFaydaOtp(fanNumber: string) {
   const sanitizedFan = fanNumber.replace(/\D/g, '');
   if (sanitizedFan.length < 10) {
     throw new Error('Please enter a valid 12 to 16 digit Fayda Identification Number (FAN).');
+  }
+
+  const now = Date.now();
+  const attempt = otpRateLimit.get(session.user.id);
+  if (attempt && attempt.expiresAt > now) {
+    if (attempt.count >= 3) {
+      throw new Error('Too many OTP requests. Please wait before trying again.');
+    }
+    attempt.count++;
+  } else {
+    otpRateLimit.set(session.user.id, { count: 1, expiresAt: now + 60 * 1000 }); // 1 minute window
   }
 
   const demoOtp = '849201';
@@ -103,7 +117,7 @@ export async function submitFaydaVerificationRequest(idPhotoUrl: string) {
     verifiedStatus: false,
   });
 
-  if (hasDbConfiguration()) {
+  if (!hasDbConfiguration()) {
     try {
       await ensureUserExists(session.user);
       await prisma.user.update({
@@ -117,6 +131,7 @@ export async function submitFaydaVerificationRequest(idPhotoUrl: string) {
       });
     } catch (error) {
       console.error('Failed to save ID verification request in DB:', error);
+      throw new Error('Failed to save verification request.');
     }
   }
 
@@ -135,8 +150,8 @@ export async function submitFaydaVerificationRequest(idPhotoUrl: string) {
 
 export async function adminApproveVerification(userId: string) {
   const session = await auth();
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized.');
+  if (!session?.user?.id || session.user.role !== 'ADMIN') {
+    throw new Error('Unauthorized. Admin access required.');
   }
 
   updateVerificationRecordState(userId, 'VERIFIED');
@@ -146,7 +161,7 @@ export async function adminApproveVerification(userId: string) {
     verifiedStatus: true,
   });
 
-  if (hasDbConfiguration()) {
+  if (!hasDbConfiguration()) {
     try {
       await prisma.user.update({
         where: { id: userId },
@@ -157,6 +172,7 @@ export async function adminApproveVerification(userId: string) {
       });
     } catch (error) {
       console.error('Failed to approve verification in DB:', error);
+      throw new Error('Failed to approve verification.');
     }
   }
 
@@ -169,8 +185,8 @@ export async function adminApproveVerification(userId: string) {
 
 export async function adminDeclineVerification(userId: string) {
   const session = await auth();
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized.');
+  if (!session?.user?.id || session.user.role !== 'ADMIN') {
+    throw new Error('Unauthorized. Admin access required.');
   }
 
   updateVerificationRecordState(userId, 'DECLINED');
@@ -180,7 +196,7 @@ export async function adminDeclineVerification(userId: string) {
     verifiedStatus: false,
   });
 
-  if (hasDbConfiguration()) {
+  if (!hasDbConfiguration()) {
     try {
       await prisma.user.update({
         where: { id: userId },
@@ -191,6 +207,7 @@ export async function adminDeclineVerification(userId: string) {
       });
     } catch (error) {
       console.error('Failed to decline verification in DB:', error);
+      throw new Error('Failed to decline verification.');
     }
   }
 

@@ -5,6 +5,11 @@ import bcrypt from 'bcryptjs';
 import { authConfig } from './auth.config';
 import { findMemoryUser, hasDbConfiguration } from '@/lib/account-store';
 
+// Admin bootstrap credentials come from environment (seeded into DB by prisma/seed.ts).
+// The fallback below only exists so the platform is reachable before the first seed run.
+const ADMIN_EMAIL = (process.env.ADMIN_EMAIL ?? 'admin@merkato.com').toLowerCase();
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? 'admin123';
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   providers: [
@@ -50,12 +55,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           }
         }
 
-        // Special Admin Account Default Login Fallback
-        if (email === 'admin@emerkato.com' && (password === 'admin123password' || password === 'admin123')) {
+        // Admin bootstrap fallback (env-driven; DB is checked first above)
+        if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
           return {
             id: 'admin_user',
             name: 'Platform Admin',
-            email: 'admin@emerkato.com',
+            email: ADMIN_EMAIL,
             role: 'ADMIN',
             verifiedStatus: true,
           };
@@ -79,6 +84,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.id = token.id as string;
         session.user.role = token.role as string;
         session.user.verifiedStatus = Boolean(token.verifiedStatus);
+
+        // Fetch fresh verified status from DB if possible
+        if (hasDbConfiguration()) {
+          try {
+            const dbUser = await prisma.user.findUnique({
+              where: { id: session.user.id },
+              select: { verifiedStatus: true, role: true }
+            });
+            if (dbUser) {
+              session.user.verifiedStatus = dbUser.verifiedStatus;
+              session.user.role = dbUser.role;
+            }
+          } catch (e) {
+            console.error('Failed to fetch fresh user status:', e);
+          }
+        }
       }
       return session;
     },
