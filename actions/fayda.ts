@@ -84,6 +84,7 @@ export async function verifyFaydaOtp(otpCode: string) {
 import {
   saveVerificationSubmission,
   updateVerificationRecordState,
+  clearAllVerificationRecords,
 } from '@/lib/verification-store';
 
 export async function submitFaydaVerificationRequest(idPhotoUrl: string) {
@@ -205,6 +206,36 @@ export async function adminDeclineVerification(userId: string) {
       });
     } catch (error) {
       console.error('Failed to decline verification in DB:', error);
+    }
+  }
+
+  revalidatePath('/account');
+  revalidatePath('/admin');
+  revalidatePath('/dashboard');
+  revalidatePath('/');
+  return { success: true };
+}
+
+export async function adminClearVerificationQueue() {
+  const session = await auth();
+  if (!session?.user?.id || session.user.role !== 'ADMIN') {
+    throw new Error('Unauthorized. Admin access required.');
+  }
+
+  clearAllVerificationRecords();
+
+  if (hasDbConfiguration()) {
+    try {
+      await prisma.user.updateMany({
+        data: {
+          verificationState: 'UNVERIFIED',
+          verifiedStatus: false,
+          nationalIdUrl: null,
+          fanNumber: null,
+        },
+      });
+    } catch (e) {
+      console.error('Failed to clear DB verification queue:', e);
     }
   }
 

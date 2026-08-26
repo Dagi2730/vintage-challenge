@@ -57,3 +57,7 @@ export function getAllVerificationRecords(): VerificationRecord[] {
     (a, b) => b.submittedAt.getTime() - a.submittedAt.getTime()
   );
 }
+
+export function clearAllVerificationRecords() {
+  globalVerificationStore.clear();
+}
