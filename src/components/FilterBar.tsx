@@ -98,6 +98,7 @@ export function FilterBar({ categories, targetPath = '/explore' }: FilterBarProp
             <option value="newest">⚡ Sort: Newest First</option>
             <option value="price_asc">🏷️ Price: Low to High</option>
             <option value="price_desc">💎 Price: High to Low</option>
+            <option value="location">📍 Location (A-Z)</option>
           </select>
 
           <button

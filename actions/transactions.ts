@@ -103,7 +103,7 @@ export async function createTransaction(listingId: string) {
   revalidatePath('/explore');
   revalidatePath('/');
 
-  return { success: true, data: transaction };
+  return { success: true, data: { ...transaction, amount: Number(transaction.amount) } };
 }
 
 export async function completeTransaction(transactionId: string) {
@@ -198,7 +198,7 @@ export async function completeTransaction(transactionId: string) {
   revalidatePath('/explore');
   revalidatePath('/');
 
-  return { success: true, data: updated };
+  return { success: true, data: { ...updated, amount: Number(updated.amount) } };
 }
 
 export async function getUserTransactions(userId: string) {
@@ -262,7 +262,10 @@ export async function getUserTransactions(userId: string) {
       }),
     ]);
 
-    return { purchases, sales };
+    return { 
+      purchases: purchases.map(p => ({ ...p, amount: Number(p.amount), listing: { ...p.listing, price: Number(p.listing.price) } })),
+      sales: sales.map(s => ({ ...s, amount: Number(s.amount), listing: { ...s.listing, price: Number(s.listing.price) } })),
+    };
   } catch (error) {
     console.error('Failed to fetch transactions:', error);
     throw new Error('Failed to fetch transactions.');

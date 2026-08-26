@@ -3,7 +3,7 @@ import Image from 'next/image';
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { Header } from '@/src/components/Header';
-import { InfoModals } from '@/src/components/InfoModals';
+import { Footer } from '@/src/components/Footer';
 import { AiAssistantWidget } from '@/src/components/AiAssistantWidget';
 import { getCategories } from '@/actions/categories';
 import { searchListings } from '@/actions/listings';
@@ -129,7 +129,7 @@ export default async function Home() {
         )}
       </main>
 
-      <InfoModals />
+      <Footer />
       <AiAssistantWidget />
     </div>
   );

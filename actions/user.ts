@@ -18,12 +18,17 @@ export async function ensureUserExists(sessionUser: { id: string; name?: string 
   try {
     const existing = await prisma.user.findUnique({ where: { id: sessionUser.id } });
     if (!existing) {
+      // Generate a proper bcrypt hash for the placeholder password.
+      // Users who land here authenticated via OAuth or the admin bootstrap —
+      // they will never log in with this hash, but storing a valid bcrypt
+      // value avoids the "fake hash in a credential column" red flag.
+      const placeholderHash = await bcrypt.hash(crypto.randomUUID(), 10);
       await prisma.user.create({
         data: {
           id: sessionUser.id,
           name: sessionUser.name || 'User Account',
           email: sessionUser.email || `${sessionUser.id}@emerkato.com`,
-          passwordHash: 'in-memory-session-user',
+          passwordHash: placeholderHash,
           role: 'USER',
           verifiedStatus: false,
         },
@@ -112,7 +117,7 @@ export async function updateUserProfile(input: {
     telegramHandle: input.telegramHandle,
   });
 
-  if (!hasDbConfiguration()) {
+  if (hasDbConfiguration()) {
     try {
       await ensureUserExists(session.user);
       await prisma.user.update({
@@ -195,8 +200,8 @@ export async function updateAdminAccount(input: {
     newPasswordHash = await bcrypt.hash(input.newPassword, 10);
   }
 
-  // Persist to Database if not in demo mode
-  if (!hasDbConfiguration()) {
+  // Persist to Database
+  if (hasDbConfiguration()) {
     try {
       const updateData: any = {
         name,

@@ -36,7 +36,7 @@ export type SearchListingsParams = {
   condition?: Condition;
   city?: string;
   neighborhood?: string;
-  sortBy?: 'newest' | 'price_asc' | 'price_desc';
+  sortBy?: 'newest' | 'price_asc' | 'price_desc' | 'location';
   page?: number;
   limit?: number;
 };
@@ -125,7 +125,7 @@ export async function createListing(input: CreateListingInput) {
     revalidatePath('/dashboard');
     revalidatePath('/explore');
 
-    return { success: true, data: listing };
+    return { success: true, data: { ...listing, price: Number(listing.price) } };
   } catch (error) {
     console.error("Error creating listing in DB:", error);
     return { success: false, error: "Failed to create listing in database." };
@@ -165,6 +165,7 @@ export async function getListingById(id: string) {
       phoneNumber: sellerProfile.phoneNumber || (listing.seller as any)?.phoneNumber || '',
       telegramHandle: sellerProfile.telegramHandle || (listing.seller as any)?.telegramHandle || '',
     },
+    price: Number(listing.price),
   };
 }
 
@@ -181,11 +182,12 @@ export async function getUserListings(userId: string) {
   }
 
   try {
-    return await prisma.listing.findMany({
+    const listings = await prisma.listing.findMany({
       where: { sellerId: userId },
       orderBy: { createdAt: 'desc' },
       include: { category: { select: { name: true, slug: true } } },
     });
+    return listings.map(l => ({ ...l, price: Number(l.price) }));
   } catch (error) {
     console.error("Error fetching user listings:", error);
     throw new Error("Failed to fetch user listings.");
@@ -254,6 +256,11 @@ export async function searchListings(params: SearchListingsParams = {}) {
       results.sort((a, b) => a.price - b.price);
     } else if (sortBy === 'price_desc') {
       results.sort((a, b) => b.price - a.price);
+    } else if (sortBy === 'location') {
+      results.sort((a, b) => {
+        if (a.city !== b.city) return a.city.localeCompare(b.city);
+        return a.neighborhood.localeCompare(b.neighborhood);
+      });
     } else {
       results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     }
@@ -283,10 +290,10 @@ export async function searchListings(params: SearchListingsParams = {}) {
   };
 
   if (keyword && keyword.trim() !== '') {
-    const term = keyword.trim();
+    const term = keyword.trim().split(/\s+/).join(' | ');
     where.OR = [
-      { title: { contains: term, mode: 'insensitive' } },
-      { description: { contains: term, mode: 'insensitive' } },
+      { title: { search: term } },
+      { description: { search: term } },
     ];
   }
 
@@ -321,6 +328,8 @@ export async function searchListings(params: SearchListingsParams = {}) {
       ? { price: 'asc' as const }
       : sortBy === 'price_desc'
       ? { price: 'desc' as const }
+      : sortBy === 'location'
+      ? [{ city: 'asc' as const }, { neighborhood: 'asc' as const }]
       : { createdAt: 'desc' as const };
 
   const skip = (page - 1) * limit;
@@ -339,7 +348,7 @@ export async function searchListings(params: SearchListingsParams = {}) {
 
     return {
       success: true,
-      data: listings,
+      data: listings.map(l => ({ ...l, price: Number(l.price) })),
       metadata: {
         total: totalCount,
         page,
@@ -370,7 +379,7 @@ export async function reportListing(input: {
 
   const reporterId = session.user.id;
 
-  if (!hasDbConfiguration()) {
+  if (hasDbConfiguration()) {
     try {
       await prisma.report.create({
         data: {
@@ -386,6 +395,50 @@ export async function reportListing(input: {
     }
   }
 
+  return { success: true };
+}
+
+export async function resolveReport(reportId: string) {
+  const session = await auth();
+  if (!session?.user?.id || session.user.role !== 'ADMIN') {
+    throw new Error('Unauthorized. Admin access required.');
+  }
+
+  if (hasDbConfiguration()) {
+    try {
+      await prisma.report.update({
+        where: { id: reportId },
+        data: { status: 'RESOLVED' },
+      });
+    } catch (e) {
+      console.error('Error resolving report:', e);
+      throw new Error('Failed to resolve report.');
+    }
+  }
+
+  revalidatePath('/admin');
+  return { success: true };
+}
+
+export async function dismissReport(reportId: string) {
+  const session = await auth();
+  if (!session?.user?.id || session.user.role !== 'ADMIN') {
+    throw new Error('Unauthorized. Admin access required.');
+  }
+
+  if (hasDbConfiguration()) {
+    try {
+      await prisma.report.update({
+        where: { id: reportId },
+        data: { status: 'DISMISSED' },
+      });
+    } catch (e) {
+      console.error('Error dismissing report:', e);
+      throw new Error('Failed to dismiss report.');
+    }
+  }
+
+  revalidatePath('/admin');
   return { success: true };
 }
 

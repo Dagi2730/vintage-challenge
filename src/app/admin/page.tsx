@@ -7,7 +7,7 @@ import { hasDbConfiguration } from '@/lib/account-store';
 import { prisma } from '@/lib/prisma';
 import { adminApproveVerification, adminDeclineVerification, adminClearVerificationQueue } from '@/actions/fayda';
 import { getAllVerificationRecords } from '@/lib/verification-store';
-import { searchListings } from '@/actions/listings';
+import { searchListings, resolveReport, dismissReport } from '@/actions/listings';
 import { DeleteListingButton } from '@/src/components/DeleteListingButton';
 import { formatPrice } from '@/lib/format';
 
@@ -64,9 +64,9 @@ export default async function AdminPage() {
             id: u.id,
             name: u.name,
             email: u.email,
-            fanNumber: u.fanNumber ?? u.phoneNumber ?? '123456789012',
-            nationalIdUrl: u.nationalIdUrl,
-            verificationState: u.verificationState || (u.verifiedStatus ? 'VERIFIED' : 'UNVERIFIED'),
+            fanNumber: u.fanNumber ?? null,
+            nationalIdUrl: u.nationalIdUrl ?? null,
+            verificationState: (u as any).verificationState ?? (u.verifiedStatus ? 'VERIFIED' : 'UNVERIFIED'),
             verifiedStatus: u.verifiedStatus,
           });
         }
@@ -105,9 +105,10 @@ export default async function AdminPage() {
   const allListings = listingsRes?.data ?? [];
 
   let reports: any[] = [];
-  if (!hasDbConfiguration()) {
+  if (hasDbConfiguration()) {
     try {
       reports = await prisma.report.findMany({
+        where: { status: 'OPEN' },
         include: {
           reporter: { select: { name: true, email: true } },
           listing: { select: { title: true } },
@@ -196,7 +197,7 @@ export default async function AdminPage() {
                       </div>
                     </td>
                     <td className="py-4 px-6 font-mono font-bold text-slate-800">
-                      {u.fanNumber ?? '9842-1049-2049'}
+                      {u.fanNumber ? u.fanNumber : <span className="text-slate-400 italic font-sans font-normal">Not submitted</span>}
                     </td>
                     <td className="py-4 px-6">
                       {u.nationalIdUrl ? (
@@ -304,6 +305,12 @@ export default async function AdminPage() {
                     <p className="text-[10px] text-slate-400 mt-2">Reported by {report.reporter?.name} ({report.reporter?.email}) on {new Date(report.createdAt).toLocaleDateString()}</p>
                   </div>
                   <div className="flex flex-col gap-2 justify-center">
+                    <form action={async () => { 'use server'; await resolveReport(report.id); }}>
+                      <button type="submit" className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg transition shadow-xs w-full">✓ Resolve</button>
+                    </form>
+                    <form action={async () => { 'use server'; await dismissReport(report.id); }}>
+                      <button type="submit" className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 font-bold text-xs rounded-lg transition w-full">✕ Dismiss</button>
+                    </form>
                     <DeleteListingButton listingId={report.listingId} redirectAfterDelete={false} />
                   </div>
                 </div>

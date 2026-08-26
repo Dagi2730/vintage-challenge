@@ -34,18 +34,22 @@ export async function requestFaydaOtp(fanNumber: string) {
     otpRateLimit.set(session.user.id, { count: 1, expiresAt: now + 60 * 1000 }); // 1 minute window
   }
 
-  const demoOtp = '849201';
+  // Generate a random 6-digit OTP
+  const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+  
   otpStore.set(session.user.id, {
-    code: demoOtp,
+    code: generatedOtp,
     expiresAt: Date.now() + 10 * 60 * 1000,
     fanNumber: sanitizedFan,
     verifiedOtp: false,
   });
 
+  // Simulate sending an SMS by printing it to the server console
+  console.log(`\n=========================================\n📲 MOCK SMS: Fayda OTP for ${session.user.email} is [ ${generatedOtp} ]\n=========================================\n`);
+
   return {
     success: true,
     message: 'OTP sent to the phone number registered with Fayda ID.',
-    demoOtp,
     maskedPhone: '+251 91 **** 456',
   };
 }
@@ -68,7 +72,7 @@ export async function verifyFaydaOtp(otpCode: string) {
     throw new Error('OTP has expired. Please request a new code.');
   }
 
-  if (otpCode.trim() !== stored.code && otpCode.trim() !== '849201') {
+  if (otpCode.trim() !== stored.code) {
     throw new Error('Invalid OTP code. Please check and try again.');
   }
 
@@ -98,8 +102,15 @@ export async function submitFaydaVerificationRequest(idPhotoUrl: string) {
   const userEmail = session.user.email ?? 'user@example.com';
   const stored = otpStore.get(userId);
 
-  const fanNumber = stored?.fanNumber ?? '9842104920491049';
-  const photoUrl = idPhotoUrl.trim() || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80';
+  if (!stored || !stored.verifiedOtp) {
+    throw new Error('You must verify your OTP before submitting identification documents.');
+  }
+
+  const fanNumber = stored.fanNumber;
+  const photoUrl = idPhotoUrl.trim();
+  if (!photoUrl) {
+    throw new Error('A photo of your National ID card is required.');
+  }
 
   // Save to global verification store
   saveVerificationSubmission({
