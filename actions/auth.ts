@@ -81,6 +81,9 @@ export async function registerUser(formData: FormData) {
   }
 }
 
+// Simple in-memory rate limiter for login
+const loginAttempts = new Map<string, { count: number; expiresAt: number }>();
+
 export async function authenticate(
   prevState: string | undefined,
   formData: FormData,
@@ -90,6 +93,17 @@ export async function authenticate(
 
   if (!email || !password) {
     return 'Please fill in both email and password.';
+  }
+
+  const now = Date.now();
+  const attempt = loginAttempts.get(email);
+  if (attempt && attempt.expiresAt > now) {
+    if (attempt.count >= 5) {
+      return 'Too many login attempts. Please try again later.';
+    }
+    attempt.count++;
+  } else {
+    loginAttempts.set(email, { count: 1, expiresAt: now + 60 * 1000 }); // 1 minute window
   }
 
   try {
@@ -103,7 +117,7 @@ export async function authenticate(
       return 'Invalid credentials.';
     }
 
-    let isAdmin = email === 'admin@emerkato.com';
+    let isAdmin = email === (process.env.ADMIN_EMAIL ?? 'admin@merkato.com').toLowerCase();
     if (!isAdmin) {
       if (!hasDbConfiguration()) {
         const u = findMemoryUser(email);
