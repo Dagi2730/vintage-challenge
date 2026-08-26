@@ -20,6 +20,7 @@ export function FaydaVerificationModal({
   const [otpCode, setOtpCode] = useState('');
   const [idPhotoUrl, setIdPhotoUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [demoOtp, setDemoOtp] = useState<string | null>(null);
 
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +52,9 @@ export function FaydaVerificationModal({
     try {
       const res = await requestFaydaOtp(fanNumber);
       if (res.success) {
-
+        if ('demoOtp' in res) {
+          setDemoOtp(res.demoOtp as string);
+        }
         setMessage(`OTP sent to ${res.maskedPhone}`);
         setStep(2);
       }
@@ -218,12 +221,17 @@ export function FaydaVerificationModal({
 
             {step === 2 && (
               <form onSubmit={handleVerifyOtp} className="space-y-4">
-                <div className="bg-blue-50 border border-blue-200 text-blue-900 text-xs p-3 rounded-xl font-medium shadow-xs">
-                  <span className="flex items-center gap-1.5">
-                    <span>📲</span>
-                    <span>Check your server console for the OTP code sent to your registered phone number.</span>
-                  </span>
-                </div>
+                {demoOtp && (
+                  <div className="bg-amber-50 border border-amber-300 text-amber-900 text-xs p-3 rounded-xl flex items-center justify-between font-medium shadow-xs">
+                    <span className="flex items-center gap-1.5">
+                      <span>📲</span>
+                      <span>Demo SMS OTP Code:</span>
+                    </span>
+                    <strong className="font-mono text-base tracking-widest bg-amber-200/60 px-2.5 py-0.5 rounded text-amber-950">
+                      {demoOtp}
+                    </strong>
+                  </div>
+                )}
 
 
                 <div>
