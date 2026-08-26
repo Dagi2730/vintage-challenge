@@ -5,7 +5,7 @@ import { Header } from '@/src/components/Header';
 import { mockUsers } from '@/src/data/mockData';
 import { hasDbConfiguration } from '@/lib/account-store';
 import { prisma } from '@/lib/prisma';
-import { adminApproveVerification, adminDeclineVerification } from '@/actions/fayda';
+import { adminApproveVerification, adminDeclineVerification, adminClearVerificationQueue } from '@/actions/fayda';
 import { getAllVerificationRecords } from '@/lib/verification-store';
 import { searchListings } from '@/actions/listings';
 import { DeleteListingButton } from '@/src/components/DeleteListingButton';
@@ -36,6 +36,12 @@ export default async function AdminPage() {
   } else {
     try {
       const dbUsers = await prisma.user.findMany({
+        where: {
+          OR: [
+            { verificationState: { in: ['IN_PROGRESS', 'VERIFIED', 'DECLINED'] } },
+            { NOT: { nationalIdUrl: null } },
+          ],
+        },
         orderBy: { createdAt: 'desc' },
       });
       const vRecords = getAllVerificationRecords();
@@ -52,14 +58,14 @@ export default async function AdminPage() {
         });
       }
       for (const u of dbUsers) {
-        if (!map.has(u.id)) {
+        if (u.nationalIdUrl && !map.has(u.id)) {
           map.set(u.id, {
             id: u.id,
             name: u.name,
             email: u.email,
-            fanNumber: u.phoneNumber ?? '123456789012',
-            nationalIdUrl: u.nationalIdUrl || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80',
-            verificationState: u.verifiedStatus ? 'VERIFIED' : 'UNVERIFIED',
+            fanNumber: u.fanNumber ?? u.phoneNumber ?? '123456789012',
+            nationalIdUrl: u.nationalIdUrl,
+            verificationState: u.verificationState || (u.verifiedStatus ? 'VERIFIED' : 'UNVERIFIED'),
             verifiedStatus: u.verifiedStatus,
           });
         }
@@ -138,12 +144,34 @@ export default async function AdminPage() {
         <section className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
           <div className="p-6 border-b border-slate-100 flex justify-between items-center">
             <h2 className="text-base font-bold text-slate-900">National ID Verification Queue</h2>
-            <span className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
-              {users.length} Records
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
+                {users.length} Records
+              </span>
+              {users.length > 0 && (
+                <form
+                  action={async () => {
+                    'use server';
+                    await adminClearVerificationQueue();
+                  }}
+                >
+                  <button
+                    type="submit"
+                    className="bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-bold text-xs px-3 py-1.5 rounded-lg transition cursor-pointer shadow-2xs flex items-center gap-1"
+                  >
+                    🗑️ Clear Queue
+                  </button>
+                </form>
+              )}
+            </div>
           </div>
 
-          <div className="overflow-x-auto">
+          {users.length === 0 ? (
+            <div className="p-8 text-center text-xs text-slate-400">
+              No pending or submitted National ID verification requests in queue.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-[11px] uppercase font-bold text-slate-400">
@@ -243,6 +271,7 @@ export default async function AdminPage() {
               </tbody>
             </table>
           </div>
+          )}
         </section>
 
         {/* Reports Queue */}
