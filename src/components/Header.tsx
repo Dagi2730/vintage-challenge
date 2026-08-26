@@ -81,7 +81,7 @@ export async function Header({ showSearch = false, searchValue = '' }: HeaderPro
             href="/login"
             className="text-sm font-semibold text-slate-700 hover:text-blue-600 transition"
           >
-            Account
+            Sign In
           </Link>
         )}
       </div>
