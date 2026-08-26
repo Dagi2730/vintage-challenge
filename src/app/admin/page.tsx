@@ -82,6 +82,21 @@ export default async function AdminPage() {
   const listingsRes = await searchListings({ limit: 100 });
   const allListings = listingsRes?.data ?? [];
 
+  let reports: any[] = [];
+  if (!hasDbConfiguration()) {
+    try {
+      reports = await prisma.report.findMany({
+        include: {
+          reporter: { select: { name: true, email: true } },
+          listing: { select: { title: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+    } catch (e) {
+      console.error('Failed to fetch reports:', e);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header />
@@ -206,6 +221,43 @@ export default async function AdminPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </section>
+
+        {/* Reports Queue */}
+        <section className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+          <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Reported Listings</h2>
+              <p className="text-xs text-slate-500 mt-0.5">User-submitted reports for community violations.</p>
+            </div>
+            <span className="text-xs font-bold text-orange-600 bg-orange-50 px-3 py-1 rounded-full border border-orange-200">
+              {reports.length} Reports
+            </span>
+          </div>
+
+          <div className="divide-y divide-slate-100">
+            {reports.length === 0 ? (
+              <div className="p-8 text-center text-xs text-slate-400">No active reports.</div>
+            ) : (
+              reports.map((report) => (
+                <div key={report.id} className="p-4 flex flex-col sm:flex-row gap-4 hover:bg-slate-50 transition">
+                  <div className="flex-1">
+                    <h3 className="font-bold text-slate-900 text-sm">
+                      <Link href={`/listings/${report.listingId}`} className="hover:text-blue-600 hover:underline">
+                        Listing: {report.listing?.title ?? 'Unknown Listing'}
+                      </Link>
+                    </h3>
+                    <p className="text-xs text-slate-600 mt-1"><strong>Reason:</strong> {report.reason}</p>
+                    {report.details && <p className="text-xs text-slate-500 italic mt-1">&quot;{report.details}&quot;</p>}
+                    <p className="text-[10px] text-slate-400 mt-2">Reported by {report.reporter?.name} ({report.reporter?.email}) on {new Date(report.createdAt).toLocaleDateString()}</p>
+                  </div>
+                  <div className="flex flex-col gap-2 justify-center">
+                    <DeleteListingButton listingId={report.listingId} redirectAfterDelete={false} />
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </section>
 
