@@ -110,7 +110,7 @@ export function SellForm({ categories }: SellFormProps) {
     const payload = {
       title: String(formData.get('title') ?? ''),
       description: String(formData.get('description') ?? ''),
-      price: Number(formData.get('price') ?? 0),
+      price: Math.round(Number(String(formData.get('price') ?? '').replace(/,/g, '').replace(/\s/g, '')) || 0),
       condition,
       city: String(formData.get('city') ?? ''),
       neighborhood: String(formData.get('neighborhood') ?? ''),

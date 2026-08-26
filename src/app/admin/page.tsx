@@ -9,6 +9,7 @@ import { adminApproveVerification, adminDeclineVerification, adminClearVerificat
 import { getAllVerificationRecords } from '@/lib/verification-store';
 import { searchListings } from '@/actions/listings';
 import { DeleteListingButton } from '@/src/components/DeleteListingButton';
+import { formatPrice } from '@/lib/format';
 
 export default async function AdminPage() {
   const session = await auth();
@@ -350,7 +351,7 @@ export default async function AdminPage() {
                       <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-2">
                         <span>Seller: <strong>{item.seller?.name ?? 'Seller'}</strong></span>
                         <span>·</span>
-                        <span>ETB {item.price?.toLocaleString()}</span>
+                        <span>{formatPrice(item.price)}</span>
                         <span>·</span>
                         <span>{item.city}, {item.neighborhood}</span>
                       </p>

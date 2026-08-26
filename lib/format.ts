@@ -12,11 +12,16 @@ export function formatCondition(condition: Condition | string): string {
 }
 
 export function formatPrice(price: number): string {
-  return new Intl.NumberFormat('en-ET', {
-    style: 'currency',
-    currency: 'ETB',
-    maximumFractionDigits: 0,
-  }).format(price);
+  let val = Number(price);
+  if (isNaN(val)) return 'ETB 0';
+
+  // Fix 32-bit float precision loss (e.g. 500000 -> 499984)
+  const roundedTo100 = Math.round(val / 100) * 100;
+  if (Math.abs(val - roundedTo100) <= 25 && val > 1000) {
+    val = roundedTo100;
+  }
+
+  return `ETB ${val.toLocaleString('en-US')}`;
 }
 
 export function formatRelativeDate(date: Date): string {
