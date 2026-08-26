@@ -1,5 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import Image from 'next/image';
+import type { Metadata } from 'next';
 import { Header } from '@/src/components/Header';
 import { BuyButton } from '@/src/components/BuyButton';
 import { DeleteListingButton } from '@/src/components/DeleteListingButton';
@@ -8,6 +10,21 @@ import { getListingById } from '@/actions/listings';
 import { getSellerReviews } from '@/actions/reviews';
 import { auth } from '@/auth';
 import { formatCondition, formatPrice } from '@/lib/format';
+
+export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+  const listing = await getListingById(params.id);
+  if (!listing) return { title: 'Listing Not Found | E-Merkato' };
+
+  return {
+    title: `${listing.title} | E-Merkato`,
+    description: listing.description.substring(0, 160),
+    openGraph: {
+      title: listing.title,
+      description: listing.description.substring(0, 160),
+      images: listing.photos.length > 0 ? [listing.photos[0]] : [],
+    }
+  };
+}
 
 export default async function ListingDetailPage({
   params,
@@ -53,10 +70,11 @@ export default async function ListingDetailPage({
             <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
               <div className="relative rounded-xl overflow-hidden bg-slate-100 h-96 w-full flex items-center justify-center">
                 {listing.photos.length > 0 ? (
-                  <img
+                  <Image
                     src={listing.photos[0]}
                     alt={listing.title}
-                    className="h-full w-full object-cover"
+                    fill
+                    className="object-cover"
                   />
                 ) : (
                   <span className="text-slate-400 text-sm">No photo available</span>
@@ -74,9 +92,9 @@ export default async function ListingDetailPage({
                   {listing.photos.map((photo: string, index: number) => (
                     <div
                       key={`${listing.id}-thumb-${index}`}
-                      className="h-20 rounded-lg overflow-hidden bg-slate-100 border border-slate-200"
+                      className="relative h-20 rounded-lg overflow-hidden bg-slate-100 border border-slate-200"
                     >
-                      <img src={photo} alt="" className="h-full w-full object-cover" />
+                      <Image src={photo} alt="" fill className="object-cover" />
                     </div>
                   ))}
                 </div>

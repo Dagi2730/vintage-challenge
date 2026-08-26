@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { Header } from '@/src/components/Header';
@@ -92,10 +93,12 @@ export default async function Home() {
                   <div className="relative h-48 w-full bg-slate-100 overflow-hidden">
                     <div className="grid grid-cols-2 gap-1 h-full">
                       {photosArray.slice(0, 4).map((photo: string, index: number) => (
-                        <img key={`${item.id}-${index}`} src={photo} alt={item.title} className="w-full h-24 object-cover" />
+                        <div key={`${item.id}-${index}`} className="relative w-full h-24">
+                          <Image src={photo} alt={item.title} fill sizes="25vw" className="object-cover" />
+                        </div>
                       ))}
                     </div>
-                    <span className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-slate-800 text-xs font-semibold px-2.5 py-1 rounded-md shadow-xs">
+                    <span className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-slate-800 text-xs font-semibold px-2.5 py-1 rounded-md shadow-xs z-10">
                       {formatCondition(item.condition)}
                     </span>
                     {item.status === 'SOLD' && (
