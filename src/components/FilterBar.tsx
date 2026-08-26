@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 type FilterBarProps = {
   categories: Array<{ id: string; name: string; slug: string }>;
@@ -48,6 +48,15 @@ export function FilterBar({ categories, targetPath = '/explore' }: FilterBarProp
 
     router.push(`${targetPath}?${params.toString()}`);
   };
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      if (q !== (searchParams.get('q') ?? '')) {
+        applyFilters({ q });
+      }
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [q, searchParams]);
 
   const handleReset = () => {
     setQ('');

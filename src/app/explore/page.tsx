@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { Header } from '@/src/components/Header';
@@ -18,6 +19,7 @@ type ExplorePageProps = {
     minPrice?: string;
     maxPrice?: string;
     sortBy?: 'newest' | 'price_asc' | 'price_desc';
+    page?: string;
   };
 };
 
@@ -32,6 +34,7 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
   const minPrice = searchParams.minPrice ? Number(searchParams.minPrice) : undefined;
   const maxPrice = searchParams.maxPrice ? Number(searchParams.maxPrice) : undefined;
   const sortBy = searchParams.sortBy ?? 'newest';
+  const page = searchParams.page ? parseInt(searchParams.page, 10) : 1;
 
   const [categories, results] = await Promise.all([
     getCategories(),
@@ -44,6 +47,7 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
       minPrice,
       maxPrice,
       sortBy,
+      page,
       limit: 24,
     }),
   ]);
@@ -84,12 +88,14 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
                 className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition flex flex-col group"
               >
                 <div className="relative h-48 w-full bg-slate-100 overflow-hidden">
-                  <img
+                  <Image
                     src={item.photos[0]}
                     alt={item.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                    fill
+                    sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                    className="object-cover group-hover:scale-105 transition duration-300"
                   />
-                  <span className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-slate-800 text-xs font-semibold px-2.5 py-1 rounded-md shadow-xs">
+                  <span className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-slate-800 text-xs font-semibold px-2.5 py-1 rounded-md shadow-xs z-10">
                     {formatCondition(item.condition)}
                   </span>
                   {item.status === 'SOLD' && (
@@ -110,6 +116,37 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
                 </div>
               </Link>
             ))}
+          </div>
+        )}
+        
+        {/* Pagination Controls */}
+        {results.metadata.totalPages > 1 && (
+          <div className="flex justify-center items-center gap-2 mt-10">
+            {results.metadata.page > 1 && (
+              <Link
+                href={`/explore?${new URLSearchParams({
+                  ...searchParams,
+                  page: String(results.metadata.page - 1)
+                }).toString()}`}
+                className="px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium hover:bg-slate-50 transition"
+              >
+                Previous
+              </Link>
+            )}
+            <span className="text-sm font-medium text-slate-700 px-4">
+              Page {results.metadata.page} of {results.metadata.totalPages}
+            </span>
+            {results.metadata.page < results.metadata.totalPages && (
+              <Link
+                href={`/explore?${new URLSearchParams({
+                  ...searchParams,
+                  page: String(results.metadata.page + 1)
+                }).toString()}`}
+                className="px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium hover:bg-slate-50 transition"
+              >
+                Next
+              </Link>
+            )}
           </div>
         )}
       </main>
