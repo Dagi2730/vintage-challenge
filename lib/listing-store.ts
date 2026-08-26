@@ -10,6 +10,10 @@ const globalListingsStore: Map<string, any> =
   (globalThis as any).__globalListingsStore || new Map();
 (globalThis as any).__globalListingsStore = globalListingsStore;
 
+const deletedMemoryIdsStore: Set<string> =
+  (globalThis as any).__deletedMemoryIdsStore || new Set();
+(globalThis as any).__deletedMemoryIdsStore = deletedMemoryIdsStore;
+
 export function getMemoryListingStatus(id: string, fallback: ListingStatus): ListingStatus {
   return globalStatusStore.get(id) ?? fallback;
 }
@@ -24,6 +28,7 @@ export function setMemoryListingStatus(id: string, status: ListingStatus) {
 }
 
 export function saveMemoryListing(listing: any) {
+  deletedMemoryIdsStore.delete(listing.id);
   globalListingsStore.set(listing.id, listing);
   return listing;
 }
@@ -31,6 +36,7 @@ export function saveMemoryListing(listing: any) {
 export function deleteMemoryListing(id: string) {
   globalListingsStore.delete(id);
   globalStatusStore.delete(id);
+  deletedMemoryIdsStore.add(id);
 }
 
 export function getAllMemoryListings(): any[] {
@@ -38,6 +44,7 @@ export function getAllMemoryListings(): any[] {
   const all = [...mockListings, ...custom];
   const unique = new Map<string, any>();
   for (const item of all) {
+    if (deletedMemoryIdsStore.has(item.id)) continue;
     unique.set(item.id, {
       ...item,
       status: getMemoryListingStatus(item.id, item.status as ListingStatus),
