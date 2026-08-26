@@ -18,6 +18,10 @@ export async function registerUser(formData: FormData) {
     return { error: 'Please fill in all required fields.' };
   }
 
+  if (password.length < 8) {
+    return { error: 'Password must be at least 8 characters long.' };
+  }
+
   const telegramHandle = rawTelegram
     ? (rawTelegram.startsWith('@') ? rawTelegram : '@' + rawTelegram)
     : '@' + name.toLowerCase().replace(/\s+/g, '');
