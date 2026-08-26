@@ -169,17 +169,27 @@ export async function completeTransaction(transactionId: string) {
     return { success: true, data: transaction, message: 'Payment already completed.' };
   }
 
+  // Atomic purchase: claim the listing with a conditional update so that when two
+  // buyers race, exactly one wins. updateMany returns a count instead of throwing.
+  const claimed = await prisma.listing.updateMany({
+    where: { id: transaction.listingId, status: ListingStatus.ACTIVE },
+    data: { status: ListingStatus.SOLD },
+  });
+
+  if (claimed.count === 0) {
+    // Another buyer completed the purchase first
+    await prisma.transaction.update({
+      where: { id: transactionId },
+      data: { status: TransactionStatus.FAILED },
+    });
+    throw new Error('Sorry — this item was just sold to another buyer.');
+  }
+
   const updated = await prisma.$transaction(async (tx) => {
     const completed = await tx.transaction.update({
       where: { id: transactionId },
       data: { status: TransactionStatus.SUCCESS },
     });
-
-    await tx.listing.update({
-      where: { id: transaction.listingId },
-      data: { status: ListingStatus.SOLD },
-    });
-
     return completed;
   });
 
@@ -192,6 +202,12 @@ export async function completeTransaction(transactionId: string) {
 }
 
 export async function getUserTransactions(userId: string) {
+  const session = await auth();
+  // IDOR guard: users may only read their own transaction history
+  if (!session?.user?.id || session.user.id !== userId) {
+    return { purchases: [], sales: [] };
+  }
+
   if (!hasDbConfiguration()) {
     const purchases = mockTransactions.filter((tx) => tx.buyerId === userId);
     const sales = mockTransactions.filter((tx) => tx.sellerId === userId);
@@ -249,6 +265,6 @@ export async function getUserTransactions(userId: string) {
     return { purchases, sales };
   } catch (error) {
     console.error('Failed to fetch transactions:', error);
-    return { purchases: [], sales: [] };
+    throw new Error('Failed to fetch transactions.');
   }
 }

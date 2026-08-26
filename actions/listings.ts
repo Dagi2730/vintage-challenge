@@ -127,36 +127,8 @@ export async function createListing(input: CreateListingInput) {
 
     return { success: true, data: listing };
   } catch (error) {
-    console.error("Error creating listing in DB, using fallback memory store:", error);
-    const categoryName = mockCategories.find((c) => c.id === validated.data.categoryId)?.name ?? 'General';
-    const fallbackListing = {
-      id: `listing_${Date.now()}`,
-      sellerId: session.user.id,
-      categoryId: validated.data.categoryId,
-      title: validated.data.title,
-      description: validated.data.description,
-      price: validated.data.price,
-      condition: validated.data.condition,
-      city: validated.data.city,
-      neighborhood: validated.data.neighborhood,
-      status: ListingStatus.ACTIVE,
-      photos: validated.data.photos,
-      createdAt: new Date(),
-      category: { name: categoryName, slug: categoryName.toLowerCase() },
-      seller: {
-        id: session.user.id,
-        name: session.user.name ?? 'Seller',
-        rating: 5.0,
-        verifiedStatus: Boolean(session.user.verifiedStatus),
-      },
-    };
-
-    saveMemoryListing(fallbackListing);
-    revalidatePath('/');
-    revalidatePath('/dashboard');
-    revalidatePath('/explore');
-
-    return { success: true, data: fallbackListing };
+    console.error("Error creating listing in DB:", error);
+    return { success: false, error: "Failed to create listing in database." };
   }
 }
 
@@ -174,6 +146,7 @@ export async function getListingById(id: string) {
       });
     } catch (error) {
       console.error("Error fetching listing:", error);
+      throw new Error("Failed to fetch listing.");
     }
   }
 
@@ -196,6 +169,12 @@ export async function getListingById(id: string) {
 }
 
 export async function getUserListings(userId: string) {
+  const session = await auth();
+  // IDOR guard: users may only read their own listings (admins can read any)
+  if (!session?.user?.id || (session.user.id !== userId && session.user.role !== 'ADMIN')) {
+    return [];
+  }
+
   if (!hasDbConfiguration()) {
     const allListings = getAllMemoryListings();
     return allListings.filter((listing) => listing.sellerId === userId);
@@ -209,7 +188,7 @@ export async function getUserListings(userId: string) {
     });
   } catch (error) {
     console.error("Error fetching user listings:", error);
-    return [];
+    throw new Error("Failed to fetch user listings.");
   }
 }
 
@@ -371,7 +350,8 @@ export async function searchListings(params: SearchListingsParams = {}) {
   } catch (error) {
     console.error("Error executing search:", error);
     return {
-      success: true,
+      success: false,
+      error: "Failed to search listings.",
       data: [],
       metadata: { total: 0, page, limit, totalPages: 0 },
     };
@@ -390,9 +370,9 @@ export async function reportListing(input: {
 
   const reporterId = session.user.id;
 
-  if (hasDbConfiguration()) {
+  if (!hasDbConfiguration()) {
     try {
-      await (prisma as any).report.create({
+      await prisma.report.create({
         data: {
           listingId: input.listingId,
           reporterId,
@@ -402,6 +382,7 @@ export async function reportListing(input: {
       });
     } catch (e) {
       console.error('Error recording report in DB:', e);
+      return { success: false, error: 'Failed to record report.' };
     }
   }
 
@@ -420,16 +401,16 @@ export async function deleteListing(id: string) {
   // Delete from memory store
   deleteMemoryListing(id);
 
-  if (hasDbConfiguration()) {
+  if (!hasDbConfiguration()) {
     try {
       const listing = await prisma.listing.findUnique({ where: { id } });
       if (listing && (listing.sellerId === userId || isAdmin)) {
-        await prisma.transaction.deleteMany({ where: { listingId: id } });
-        await prisma.report.deleteMany({ where: { listingId: id } });
+        // Reviews, reports and transactions cascade via FK onDelete rules
         await prisma.listing.delete({ where: { id } });
       }
     } catch (error) {
       console.error('Error deleting listing from DB:', error);
+      return { success: false, error: 'Failed to delete listing.' };
     }
   }
 

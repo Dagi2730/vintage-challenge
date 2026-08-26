@@ -18,7 +18,7 @@ export type MemoryAccount = {
 const memoryUsers = new Map<string, MemoryAccount>();
 
 export function hasDbConfiguration() {
-  return Boolean(process.env.DATABASE_URL);
+  return process.env.DEMO_MODE !== 'true';
 }
 
 export function findMemoryUser(email: string) {

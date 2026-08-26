@@ -8,6 +8,10 @@ import { revalidatePath } from 'next/cache';
 
 import { getVerificationRecord } from '@/lib/verification-store';
 
+// Admin bootstrap credentials come from environment (see auth.ts / prisma/seed.ts)
+const ADMIN_EMAIL = (process.env.ADMIN_EMAIL ?? 'admin@merkato.com').toLowerCase();
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? 'admin123';
+
 export async function ensureUserExists(sessionUser: { id: string; name?: string | null; email?: string | null }) {
   if (!hasDbConfiguration() || !sessionUser?.id) return;
 
@@ -85,19 +89,7 @@ export async function getUserProfile(userId: string) {
     };
   } catch (error) {
     console.error('Error fetching user profile:', error);
-    const memoryUser = findMemoryUserById(userId);
-    const vState = vRecord?.verificationState ?? memoryUser?.verificationState ?? 'UNVERIFIED';
-    return {
-      id: userId,
-      name: memoryUser?.name ?? 'User Account',
-      email: memoryUser?.email ?? 'user@example.com',
-      phoneNumber: memoryUser?.phoneNumber ?? '',
-      telegramHandle: memoryUser?.telegramHandle ?? '',
-      fanNumber: vRecord?.fanNumber ?? null,
-      nationalIdUrl: vRecord?.nationalIdUrl ?? null,
-      verificationState: vState,
-      verifiedStatus: vState === 'VERIFIED',
-    };
+    throw new Error('Failed to fetch user profile.');
   }
 }
 
@@ -120,7 +112,7 @@ export async function updateUserProfile(input: {
     telegramHandle: input.telegramHandle,
   });
 
-  if (hasDbConfiguration()) {
+  if (!hasDbConfiguration()) {
     try {
       await ensureUserExists(session.user);
       await prisma.user.update({
@@ -133,6 +125,7 @@ export async function updateUserProfile(input: {
       });
     } catch (error) {
       console.error('Error updating user profile in DB:', error);
+      return { success: false, error: 'Failed to update user profile in database.' };
     }
   }
 
@@ -171,18 +164,18 @@ export async function updateAdminAccount(input: {
       return { error: 'Current password is required to change password.' };
     }
 
-    // Verify current password against DB or memory user or default fallback
+    // Verify current password against DB or memory user or env fallback
     let isCurrentValid = false;
     if (hasDbConfiguration()) {
       try {
         const adminDb = await prisma.user.findUnique({ where: { id: userId } });
         if (adminDb && adminDb.passwordHash) {
           isCurrentValid = await bcrypt.compare(input.currentPassword, adminDb.passwordHash);
-        } else if (input.currentPassword === 'admin123password' || input.currentPassword === 'admin123') {
+        } else if (input.currentPassword === ADMIN_PASSWORD) {
           isCurrentValid = true;
         }
       } catch (e) {
-        if (input.currentPassword === 'admin123password' || input.currentPassword === 'admin123') {
+        if (input.currentPassword === ADMIN_PASSWORD) {
           isCurrentValid = true;
         }
       }
@@ -190,7 +183,7 @@ export async function updateAdminAccount(input: {
       const memoryUser = findMemoryUserById(userId);
       if (memoryUser && memoryUser.passwordHash) {
         isCurrentValid = await bcrypt.compare(input.currentPassword, memoryUser.passwordHash);
-      } else if (input.currentPassword === 'admin123password' || input.currentPassword === 'admin123') {
+      } else if (input.currentPassword === ADMIN_PASSWORD) {
         isCurrentValid = true;
       }
     }
@@ -202,8 +195,8 @@ export async function updateAdminAccount(input: {
     newPasswordHash = await bcrypt.hash(input.newPassword, 10);
   }
 
-  // Persist to Database if configured
-  if (hasDbConfiguration()) {
+  // Persist to Database if not in demo mode
+  if (!hasDbConfiguration()) {
     try {
       const updateData: any = {
         name,
@@ -228,7 +221,7 @@ export async function updateAdminAccount(input: {
             id: userId,
             name,
             email,
-            passwordHash: newPasswordHash || (await bcrypt.hash('admin123password', 10)),
+            passwordHash: newPasswordHash || (await bcrypt.hash(ADMIN_PASSWORD, 10)),
             role: 'ADMIN',
             verifiedStatus: true,
           },
