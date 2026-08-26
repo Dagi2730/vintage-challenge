@@ -79,6 +79,21 @@ export default async function AdminPage() {
     }
   }
 
+  if (hasDbConfiguration()) {
+    try {
+      await prisma.listing.deleteMany({
+        where: {
+          OR: [
+            { photos: { has: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&q=80' } },
+            { title: { in: ['dining table', 'iphone 15 pro max', 'sofas', 'house'] } },
+          ],
+        },
+      });
+    } catch (e) {
+      console.error('Failed to auto-clean legacy demo listings:', e);
+    }
+  }
+
   const listingsRes = await searchListings({ limit: 100 });
   const allListings = listingsRes?.data ?? [];
 
