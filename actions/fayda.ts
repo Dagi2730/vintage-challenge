@@ -51,6 +51,7 @@ export async function requestFaydaOtp(fanNumber: string) {
     success: true,
     message: 'OTP sent to the phone number registered with Fayda ID.',
     maskedPhone: '+251 91 **** 456',
+    demoOtp: generatedOtp,
   };
 }
 
