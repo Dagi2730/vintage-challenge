@@ -400,9 +400,15 @@ export async function deleteListing(id: string) {
 
   if (hasDbConfiguration()) {
     try {
-      await prisma.transaction.deleteMany({ where: { listingId: id } });
-      await prisma.report.deleteMany({ where: { listingId: id } });
-      await prisma.listing.deleteMany({ where: { id } });
+      // First update status to SOLD so active queries immediately drop it
+      await prisma.listing.updateMany({
+        where: { OR: [{ id }, { title: id }] },
+        data: { status: 'SOLD' },
+      });
+      // Then delete transaction, report, and listing records completely
+      await prisma.transaction.deleteMany({ where: { OR: [{ listingId: id }, { listing: { title: id } }] } });
+      await prisma.report.deleteMany({ where: { OR: [{ listingId: id }, { listing: { title: id } }] } });
+      await prisma.listing.deleteMany({ where: { OR: [{ id }, { title: id }] } });
     } catch (error) {
       console.error('Error deleting listing from DB:', error);
     }
